@@ -101,7 +101,7 @@ plt.scatter(df_female_sorted['Height (inch)'], y_female, color='blue', label='Ac
 plt.plot(df_female_sorted['Height (inch)'], y_pred_line, color='red', label='Regression Line')
 plt.xlabel('Height (inch)')
 plt.ylabel('Weight (pound)')
-plt.title('Regression Line for Weight vs Height (Gender=0)')
+plt.title('Regression Line for Weight vs Height (Gender=Female)')
 plt.legend()
 plt.show()
 
