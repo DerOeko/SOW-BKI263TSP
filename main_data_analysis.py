@@ -1,4 +1,7 @@
-#%%
+# %% ==========================================================================
+# ========== IMPORTS ==========================================================
+# =============================================================================
+
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
@@ -6,11 +9,19 @@ import scipy
 from scipy.stats import binomtest
 import seaborn as sns
 import re
+
+# %% ==========================================================================
+# ========== Read in raw surveys (must be in the same folder as this script) ==
+# =============================================================================
+
 raw_survey1a = pd.read_csv('survey1a.csv')
 #raw_survey1b = pd.read_csv('survey1b.csv')
 #raw_survey2a = pd.read_csv('survey2a.csv')
 raw_survey2b = pd.read_csv('survey2b.csv')
-# %%
+
+# %% ==========================================================================
+# ========== Define mappings, data cleaner and processing function ============
+# =============================================================================
 
 survey1_text_origins = {
     1: False,
@@ -111,9 +122,11 @@ survey1a_long = convert_wide_to_long(clean_survey1a, survey1_text_origins, surve
 #survey1b_long = convert_wide_to_long(clean_survey1b, survey1_text_origins, survey_number=1, background_first=False)
 #survey2a_long = convert_wide_to_long(clean_survey2a, survey2_text_origins, survey_number=2, background_first=True)
 survey2b_long = convert_wide_to_long(clean_survey2b, survey2_text_origins, survey_number=2, background_first=False)
+
 # %% ==========================================================================
 # ========== Combine subject datasets together to form a long dataframe =======
 # =============================================================================
+
 trust_cols1 = [col for col in clean_survey1a.columns if 'trustworthy' in col]
 credible_cols1 = [col for col in clean_survey1a.columns if 'credible' in col]
 usage_cols1 = [col for col in clean_survey1a.columns if 'confident' in col]
@@ -124,10 +137,11 @@ background_cols1 = [col for col in clean_survey1a.columns if col not in trust_co
 combined_df = pd.concat([survey1a_long, survey2b_long], ignore_index=True)
 
 df = combined_df.dropna(subset=['trustworthy', 'credible', 'confident', 'belief'])
-
+print(f"Number of valid data observations: {len(df)}")
 # %% ==========================================================================
 # ========== Do participants perform significantly above chance level? ========
 # =============================================================================
+
 df['correct_belief'] = df['ai_generated'] == df['belief']
 
 k = sum(df['correct_belief'])
@@ -142,6 +156,7 @@ print("p-value:", result.pvalue)
 # %% ==========================================================================
 # ========== Participant-wise analysis ========================================
 # =============================================================================
+
 unique_participants = df['participant_id'].unique()
 
 for participant in unique_participants:
