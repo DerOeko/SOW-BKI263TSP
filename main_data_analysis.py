@@ -667,167 +667,44 @@ binom_test_result_2a = binomtest(total_successes_2a, total_trials_2a, 0.5, alter
 # print(f"Binomial test result for Survey 2a: {binom_test_result_2a}")
 
 # %% ==========================================================================
-# ========== Concatenate dataframes and analyze trust differences =============
+# ========== Correlating trust with essay confidence usage column ===================================
 # =============================================================================
+df_1a = data_cleaner(raw_Survey1a, survey1a_col_mapping, survey_number=1, background_first=True)
+#print(df_1a)
+df_2a = data_cleaner(raw_Survey2a, survey2a_col_mapping, survey_number=2,background_first=False)
 
-# Concatenate all survey dataframes
-all_data = pd.concat([df_1a, df_1b, df_2a, df_2b], ignore_index=True)
+def correlate_trust_usage(df, survey_prefix="Sv2a"):
+    """
+    Correlating the trust in a text and the confidence of the participant in using it in an essay
 
-# Create lists to hold trust ratings for AI and human texts
-ai_trust_ratings = []
-human_trust_ratings = []
+    STILL WIP WILL EXPLAIN LATER
 
-# Extract all trust ratings and organize by origin (AI or human)
-for survey_prefix in ["Sv1a", "Sv1b", "Sv2a", "Sv2b"]:
-    for text_num in range(1, 13):
-        # Get column names
-        trust_col = f"{survey_prefix}_T{text_num}_trustworthy"
-        ai_col = f"{survey_prefix}_T{text_num}_ai_generated"
-        
-        # Check if both columns exist in the dataframe
-        if trust_col in all_data.columns and ai_col in all_data.columns:
-            # Extract trust ratings and organize by text origin
-            # Convert to numeric and handle NaNs before filtering
-            trust_ratings = pd.to_numeric(all_data[trust_col], errors='coerce')
-            is_ai = all_data[ai_col].fillna(False).astype(bool)  # Fill NaN with False before converting to boolean
-            
-            # Add to respective lists, making sure to filter out NaNs
-            ai_trust_ratings.extend(trust_ratings[is_ai & ~trust_ratings.isna()].tolist())
-            human_trust_ratings.extend(trust_ratings[~is_ai & ~trust_ratings.isna()].tolist())
+    Parameters:
+      df: DataFrame containing the survey data
+      survey_prefix: A string such as "Sv1a", "Sv1b", "Sv2a" or "Sv2b"
+      
+    Returns:
+      STILL WIP WILL fix later
+    """
+    result = df.copy()
+    for i in range(1, 13):
+        trustworthy_col = f"{survey_prefix}_T{i}_trustworthy"
+        confident_col = f"{survey_prefix}_T{i}_confident"
+        if trustworthy_col in result.columns and confident_col in result.columns:
+            for idx in result.index:
+            # Only process if both columns exist
+                if trustworthy_col in result.columns and confident_col in result.columns:
+                    trustworthy_int = result.loc[idx, trustworthy_col]
+                    confident_int = result.loc[idx, confident_col]
+                    participant_id = result.loc[idx, "id"]
+                    if trustworthy_int == confident_int:
+                        print(f"MATCH {survey_prefix}_T{i}: trust and confidence for {survey_prefix}_T{i} match, trust: {trustworthy_int}, confidence: {confident_int}, participant: {participant_id}")
+                    if trustworthy_int > confident_int:
+                        print(f"MISMATCH TRUST HIGHER {survey_prefix}_T{i}: trust and confidence for {survey_prefix}_T{i} don't match, trust is higher: {trustworthy_int} than confidence: {confident_int}, participant: {participant_id}")
+                    if trustworthy_int < confident_int:
+                        print(f"MISMATCH TRUST LOWER {survey_prefix}_T{i}: trust and confidence for {survey_prefix}_T{i} don't match, trust is lower: {trustworthy_int} than confidence: {confident_int}, participant: {participant_id}")
+    return result
 
-# Convert to numpy arrays for analysis
-ai_trust = np.array(ai_trust_ratings)
-human_trust = np.array(human_trust_ratings)
-
-# Calculate basic statistics
-ai_mean = np.mean(ai_trust)
-ai_std = np.std(ai_trust)
-human_mean = np.mean(human_trust)
-human_std = np.std(human_trust)
-
-print(f"AI-generated texts - Mean trust: {ai_mean:.2f}, Std: {ai_std:.2f}")
-print(f"Human-written texts - Mean trust: {human_mean:.2f}, Std: {human_std:.2f}")
-
-# Statistical test to compare means (t-test)
-from scipy.stats import ttest_ind
-t_stat, p_value = ttest_ind(ai_trust, human_trust, equal_var=False)  # Using Welch's t-test (does not assume equal variances)
-
-print(f"Independent samples t-test: t={t_stat:.3f}, p={p_value:.4f}")
-if p_value < 0.05:
-    print("The difference in trust between AI-generated and human-written texts is statistically significant.")
-else:
-    print("No statistically significant difference in trust was found.")
-
-# Visualize the difference
-plt.figure(figsize=(10, 6))
-sns.violinplot(x=['AI-Generated']*len(ai_trust) + ['Human-Written']*len(human_trust),
-               y=list(ai_trust) + list(human_trust))
-plt.title('Trust Ratings Distribution: AI-Generated vs. Human-Written Texts')
-plt.ylabel('Trust Rating')
-plt.savefig('trust_comparison_violin.png', dpi=300, bbox_inches='tight')
-plt.show()
-
-# Also compare using a box plot
-plt.figure(figsize=(10, 6))
-sns.boxplot(x=['AI-Generated']*len(ai_trust) + ['Human-Written']*len(human_trust),
-            y=list(ai_trust) + list(human_trust))
-plt.title('Trust Ratings: AI-Generated vs. Human-Written Texts')
-plt.ylabel('Trust Rating')
-plt.savefig('trust_comparison_boxplot.png', dpi=300, bbox_inches='tight')
-plt.show()
-
-# %% ==========================================================================
-# ========== Similarly analyze credibility and confidence differences =========
-# =============================================================================
-
-# Create lists to hold credibility ratings for AI and human texts
-ai_credible_ratings = []
-human_credible_ratings = []
-
-# Extract all credibility ratings and organize by origin (AI or human)
-for survey_prefix in ["Sv1a", "Sv1b", "Sv2a", "Sv2b"]:
-    for text_num in range(1, 13):
-        # Get column names
-        credible_col = f"{survey_prefix}_T{text_num}_credible"
-        ai_col = f"{survey_prefix}_T{text_num}_ai_generated"
-        
-        # Check if both columns exist in the dataframe
-        if credible_col in all_data.columns and ai_col in all_data.columns:
-            # Extract credibility ratings and organize by text origin
-            # Convert to numeric and handle NaNs before filtering
-            credible_ratings = pd.to_numeric(all_data[credible_col], errors='coerce')
-            is_ai = all_data[ai_col].fillna(False).astype(bool)  # Fill NaN with False before converting to boolean
-            
-            # Add to respective lists, making sure to filter out NaNs
-            ai_credible_ratings.extend(credible_ratings[is_ai & ~credible_ratings.isna()].tolist())
-            human_credible_ratings.extend(credible_ratings[~is_ai & ~credible_ratings.isna()].tolist())
-
-# Convert to numpy arrays for analysis
-ai_credible = np.array(ai_credible_ratings)
-human_credible = np.array(human_credible_ratings)
-
-# Calculate basic statistics for credibility
-ai_credible_mean = np.mean(ai_credible)
-ai_credible_std = np.std(ai_credible)
-human_credible_mean = np.mean(human_credible)
-human_credible_std = np.std(human_credible)
-
-print(f"\nCredibility comparison:")
-print(f"AI-generated texts - Mean credibility: {ai_credible_mean:.2f}, Std: {ai_credible_std:.2f}")
-print(f"Human-written texts - Mean credibility: {human_credible_mean:.2f}, Std: {human_credible_std:.2f}")
-
-# Statistical test for credibility
-t_stat_credible, p_value_credible = ttest_ind(ai_credible, human_credible, equal_var=False)
-print(f"T-test result: t={t_stat_credible:.3f}, p={p_value_credible:.4f}")
-
-# Visualize the credibility difference
-plt.figure(figsize=(10, 6))
-sns.violinplot(x=['AI-Generated']*len(ai_credible) + ['Human-Written']*len(human_credible),
-               y=list(ai_credible) + list(human_credible))
-plt.title('Credibility Ratings Distribution: AI-Generated vs. Human-Written Texts')
-plt.ylabel('Credibility Rating')
-plt.xlabel('Text Source')
-plt.ylim(0, 1.0)  # Set y-axis limits to match the plot in your image
-plt.savefig('credibility_comparison_violin.png', dpi=300, bbox_inches='tight')
-plt.show()
-
-# Also create a boxplot for credibility
-plt.figure(figsize=(10, 6))
-sns.boxplot(x=['AI-Generated']*len(ai_credible) + ['Human-Written']*len(human_credible),
-            y=list(ai_credible) + list(human_credible))
-plt.title('Credibility Ratings: AI-Generated vs. Human-Written Texts')
-plt.ylabel('Credibility Rating')
-plt.xlabel('Text Source')
-plt.ylim(0, 1.0)  # Set y-axis limits to match the plot in your image
-plt.savefig('credibility_comparison_boxplot.png', dpi=300, bbox_inches='tight')
-plt.show()
-
-# %% ==========================================================================
-# ========== Create a standalone credibility comparison figure ================
-# =============================================================================
-
-# Create a clean figure with proper labels matching your image
-plt.figure(figsize=(12, 8))
-plt.title('Credibility Ratings: AI-Generated vs. Human-Written Texts', fontsize=16)
-plt.ylabel('Credibility Rating', fontsize=14)
-plt.xlabel('', fontsize=14)
-plt.ylim(0.0, 1.0)
-plt.xlim(0.0, 1.0)
-
-# If you need to display specific data points or a different visualization:
-# Example: create a scatter plot of credibility ratings
-# For demonstration, we'll plot random points - replace this with your actual data points
-if len(ai_credible) > 0 and len(human_credible) > 0:
-    # Create scatter plots or other visualizations
-    # You might need to adjust this based on your specific requirements
-    plt.scatter(np.random.uniform(0.2, 0.4, len(ai_credible)), ai_credible, 
-                alpha=0.5, label='AI-Generated', color='blue')
-    plt.scatter(np.random.uniform(0.6, 0.8, len(human_credible)), human_credible, 
-                alpha=0.5, label='Human-Written', color='green')
-    plt.legend(fontsize=12)
-
-plt.tight_layout()
-plt.savefig('credibility_ratings_comparison.png', dpi=300, bbox_inches='tight')
-plt.show()
-
+#correlate_trust_usage(df_1a, "Sv1a")
+correlate_trust_usage(df_2a, "Sv2a")
 # %%
