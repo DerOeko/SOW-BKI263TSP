@@ -5,10 +5,15 @@
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+# configure pandas pretty printing
+pd.set_option('display.max_columns', None)
+pd.set_option('display.width', None)
 import scipy
 from scipy.stats import binomtest
 import seaborn as sns
 import re
+
+
 
 # %% ==========================================================================
 # ========== read in raw surveys (must be in the same folder as this script) ==
@@ -71,7 +76,7 @@ survey2_text_origins = {
 survey1a_col_mapping = {
 
 
-        "id. Response_ID": "id",
+        "id. Response_ID": "participant_id",
         "submitdate. Date_submitted": "submitdate",
         "lastpage. Last_page": "lastpage",
         "startlanguage. Start_language": "startlanguage",
@@ -177,7 +182,7 @@ survey1a_col_mapping = {
 }
 
 survey2a_col_mapping= {
-            "id. Response_ID": "id",
+            "id. Response_ID": "participant_id",
             "submitdate. Date_submitted": "submitdate",
             "lastpage. Last_page": "lastpage",
             "startlanguage. Start_language": "startlanguage",
@@ -282,7 +287,7 @@ survey2a_col_mapping= {
         }
 
 survey1b_col_mapping= {
-        "id. Response_ID": "id",
+        "id. Response_ID": "participant_id",
         "submitdate. Date_submitted": "submitdate",
         "lastpage. Last_page": "lastpage",
         "startlanguage. Start_language": "startlanguage",
@@ -387,7 +392,7 @@ survey1b_col_mapping= {
 }
 
 survey2b_col_mapping= {
-        "id. Response_ID": "id",
+        "id. Response_ID": "participant_id",
         "submitdate. Date_submitted": "submitdate",
         "lastpage. Last_page": "lastpage",
         "startlanguage. Start_language": "startlanguage",
@@ -515,25 +520,22 @@ def data_cleaner(
     """
     # create a copy to avoid SettingWithCopyWarning
     result = df.copy()
-    
-    # apply column mapping
+    # apply name column mapping
     result.rename(columns=column_mapping, inplace=True)
+    # filter out participants who did not agree to participate
+    result = result[result["do_you_agree_to_participate"] == "Yes"]
+
+    # filter out participants who did not complete the survey
+    result = result.dropna(subset=['G02Q02_SQ001'])
+    # drop irrelevant columns
     result = result.drop(columns=["submitdate", "startlanguage", "seed"])
-    # drop rows with any missing values
-    result = result.dropna()
     
-    # ensure participant_id exists
-    if 'participant_id' not in result.columns:
-        if 'PROLIFIC_PID' in result.columns:
-            result['participant_id'] = result['PROLIFIC_PID']
-        else:
-            result['participant_id'] = result.index.astype(str)
     
-    # tweak participant_id and add metadata
-    pid_suffix = f"_{survey_number}" + ("a" if background_first else "b")
-    result.loc[:, 'participant_id'] = result['participant_id'].astype(str) + pid_suffix
-    result.loc[:, 'background_first'] = background_first
-    result.loc[:, 'survey_number'] = survey_number
+    # build participant_id with suffix
+    result["participant_id"] = result["participant_id"].astype(str) + f"_{survey_number}"
+    print(survey_number)
+   
+    
     
     # add AI‑generated and correct belief columns if requested
     if survey_text_origins is not None and survey_prefix is not None:
@@ -611,7 +613,7 @@ def correct_belief(df, survey_prefix="Sv1a"):
                 ((ai_generated_str == "true") & (belief_str == "yes")) |
                 ((ai_generated_str == "false") & (belief_str == "no"))
             )
-            print(f"Correct belief for {survey_prefix}_T{i}: {result[f'{survey_prefix}_T{i}_correct_belief'].values}")
+            # print(f"Correct belief for {survey_prefix}_T{i}: {result[f'{survey_prefix}_T{i}_correct_belief'].values}")
     return result
 
 
@@ -620,7 +622,7 @@ def correct_belief(df, survey_prefix="Sv1a"):
 df_1a = data_cleaner(
     raw_Survey1a,
     survey1a_col_mapping,
-    survey_number=1,
+    survey_number="1a",
     background_first=True,
     survey_text_origins=survey1_text_origins,
     survey_prefix="Sv1a"
@@ -629,7 +631,7 @@ df_1a = data_cleaner(
 df_2a = data_cleaner(
     raw_Survey2a,
     survey2a_col_mapping,
-    survey_number=2,
+    survey_number="2a",
     background_first=False,
     survey_text_origins=survey2_text_origins,
     survey_prefix="Sv2a"
@@ -638,7 +640,7 @@ df_2a = data_cleaner(
 df_1b = data_cleaner(
     raw_Survey1b,
     survey1b_col_mapping,
-    survey_number=1,
+    survey_number="1b",
     background_first=False,
     survey_text_origins=survey1_text_origins,
     survey_prefix="Sv1b"
@@ -647,7 +649,7 @@ df_1b = data_cleaner(
 df_2b = data_cleaner(
     raw_Survey2b,
     survey2b_col_mapping,
-    survey_number=2,
+    survey_number="2b",
     background_first=True,
     survey_text_origins=survey2_text_origins,
     survey_prefix="Sv2b"
@@ -680,9 +682,6 @@ binom_test_result_2a = binomtest(total_successes_2a, total_trials_2a, 0.5, alter
 # %% ==========================================================================
 # ========== Correlating trust with essay confidence usage column ===================================
 # =============================================================================
-df_1a = data_cleaner(raw_Survey1a, survey1a_col_mapping, survey_number=1, background_first=True)
-#print(df_1a)
-df_2a = data_cleaner(raw_Survey2a, survey2a_col_mapping, survey_number=2,background_first=False)
 
 def correlate_trust_usage(df, survey_prefix="Sv2a"):
     """
@@ -707,78 +706,38 @@ def correlate_trust_usage(df, survey_prefix="Sv2a"):
                 if trustworthy_col in result.columns and confident_col in result.columns:
                     trustworthy_int = result.loc[idx, trustworthy_col]
                     confident_int = result.loc[idx, confident_col]
-                    participant_id = result.loc[idx, "id"]
-                    if trustworthy_int == confident_int:
-                        print(f"MATCH {survey_prefix}_T{i}: trust and confidence for {survey_prefix}_T{i} match, trust: {trustworthy_int}, confidence: {confident_int}, participant: {participant_id}")
-                    if trustworthy_int > confident_int:
-                        print(f"MISMATCH TRUST HIGHER {survey_prefix}_T{i}: trust and confidence for {survey_prefix}_T{i} don't match, trust is higher: {trustworthy_int} than confidence: {confident_int}, participant: {participant_id}")
-                    if trustworthy_int < confident_int:
-                        print(f"MISMATCH TRUST LOWER {survey_prefix}_T{i}: trust and confidence for {survey_prefix}_T{i} don't match, trust is lower: {trustworthy_int} than confidence: {confident_int}, participant: {participant_id}")
+                    
+                    # if trustworthy_int == confident_int:
+                    #     print(f"MATCH {survey_prefix}_T{i}: trust and confidence for {survey_prefix}_T{i} match, trust: {trustworthy_int}, confidence: {confident_int}, participant: {participant_id}")
+                    # if trustworthy_int > confident_int:
+                    #     print(f"MISMATCH TRUST HIGHER {survey_prefix}_T{i}: trust and confidence for {survey_prefix}_T{i} don't match, trust is higher: {trustworthy_int} than confidence: {confident_int}, participant: {participant_id}")
+                    # if trustworthy_int < confident_int:
+                    #     print(f"MISMATCH TRUST LOWER {survey_prefix}_T{i}: trust and confidence for {survey_prefix}_T{i} don't match, trust is lower: {trustworthy_int} than confidence: {confident_int}, participant: {participant_id}")
     return result
 
 #correlate_trust_usage(df_1a, "Sv1a")
 correlate_trust_usage(df_2a, "Sv2a")
 # %%
 
-def process_surveys_to_csv(df_1a, df_2a, df_1b, df_2b, output_filename="trust_metrics_processed.csv"):
-    """
-    Process survey dataframes directly into a simplified CSV with columns:
-    participant_id, text_number, ai_generated, metric, rating
-    
-    Parameters:
-    - df_1a, df_2a, df_1b, df_2b: Processed survey dataframes
-    - output_filename: Name of output CSV file
-    """
-    import pandas as pd
-    
-    # Initialize an empty list to store all records
-    all_records = []
-    
-    # Process each dataframe
-    for df, survey_suffix in [(df_1a, "1a"), (df_2a, "2a"), (df_1b, "1b"), (df_2b, "2b")]:
-        # For each text in the survey (1-12)
-        for text_num in range(1, 13):
-            # Column name for AI generated status
-            ai_col = f"Sv{survey_suffix}_T{text_num}_ai_generated"
-            
-            # Only process if the AI column exists
-            if ai_col in df.columns:
-                # Get trustworthy ratings
-                trustworthy_col = f"Sv{survey_suffix}_T{text_num}_trustworthy"
-                if trustworthy_col in df.columns:
-                    for idx, row in df.iterrows():
-                        participant_id = row["participant_id"]
-                        ai_generated = row[ai_col]
-                        rating = row.get(trustworthy_col)
-                        
-                        # Create a text_number in the format "1_1a"
-                        text_id = f"{text_num}_{survey_suffix}"
-                        
-                        # Add record if rating is not NaN
-                        if pd.notna(rating):
-                            all_records.append({
-                                "participant_id": participant_id,
-                                "text_number": text_id,
-                                "ai_generated": ai_generated,
-                                "metric": "trustworthy",
-                                "rating": rating
-                            })
-    
-    # Convert to DataFrame and save to CSV
-    result_df = pd.DataFrame(all_records)
-    print(result_df.head())
-    result_df.to_csv(output_filename, index=False)
-    print(f"Data saved to {output_filename}")
-    return result_df
 
-# Execute the function with your dataframes
-processed_df = process_surveys_to_csv(df_1a, df_2a, df_1b, df_2b)
 # %%
 
-print("print df_1a",df_1a.head())
-print("print df_2a",df_2a.head())
-print("print df_1b",df_1b.head())
-print("print df_2b",df_2b.head())
+print("df_1a head:")
+print(df_1a.to_string())
+print("df_2a head:")
+print(df_2a.to_string())
+print("df_1b head:")
+print(df_1b.to_string())
+print("df_2b head:")
+print(df_2b.to_string())
+
+# print shape
+
+print(f"df_1a shape: {df_1a.shape}")
+print(f"df_2a shape: {df_2a.shape}")
+print(f"df_1b shape: {df_1b.shape}")
+print(f"df_2b shape: {df_2b.shape}")
+
 
 # Save the cleaned dataframes to CSV files
 # %%
