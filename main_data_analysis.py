@@ -718,37 +718,48 @@ binom_test_result_2a = binomtest(total_successes_2a, total_trials_2a, 0.5, alter
 def correlate_trust_usage(df, survey_prefix="Sv2a"):
     """
     Correlating the trust in a text and the confidence of the participant in using it in an essay
-
-    STILL WIP WILL EXPLAIN LATER
+    Does so by collecting for all the texts per participant the trust and confidence in the text
+    Next we find the corr_score which is the correlation score: trust-confidence and the average.
+    we find the means of these per participant, if mean_abs_trust_conf_diff is close to 0, the 
+    participant has a good correlational level over all texts, mean_trust_conf_avg indicates the mean of the trust
+    and confidence level combined over all texts
 
     Parameters:
       df: DataFrame containing the survey data
       survey_prefix: A string such as "Sv1a", "Sv1b", "Sv2a" or "Sv2b"
       
     Returns:
-      STILL WIP WILL fix later
+      new resulting dataframe
     """
     result = df.copy()
-    for i in range(1, 13):
-        trustworthy_col = f"{survey_prefix}_T{i}_trustworthy"
-        confident_col = f"{survey_prefix}_T{i}_confident"
-        if trustworthy_col in result.columns and confident_col in result.columns:
-            for idx in result.index:
-            # Only process if both columns exist
-                if trustworthy_col in result.columns and confident_col in result.columns:
-                    trustworthy_int = result.loc[idx, trustworthy_col]
-                    confident_int = result.loc[idx, confident_col]
-                    
-                    # if trustworthy_int == confident_int:
-                    #     print(f"MATCH {survey_prefix}_T{i}: trust and confidence for {survey_prefix}_T{i} match, trust: {trustworthy_int}, confidence: {confident_int}, participant: {participant_id}")
-                    # if trustworthy_int > confident_int:
-                    #     print(f"MISMATCH TRUST HIGHER {survey_prefix}_T{i}: trust and confidence for {survey_prefix}_T{i} don't match, trust is higher: {trustworthy_int} than confidence: {confident_int}, participant: {participant_id}")
-                    # if trustworthy_int < confident_int:
-                    #     print(f"MISMATCH TRUST LOWER {survey_prefix}_T{i}: trust and confidence for {survey_prefix}_T{i} don't match, trust is lower: {trustworthy_int} than confidence: {confident_int}, participant: {participant_id}")
+
+    agg_corr_trust_conf_per_participant = []
+    agg_average_trust_conf_per_partcipant = []
+    for participant_idx in range(result.shape[0]): #for each participant
+        agg_corr_trust_conf = []
+        agg_average_trust_conf = []
+        for text_num in range(1, 13): #for each text
+            trustworthy_col = f"{survey_prefix}_T{text_num}_trustworthy"
+            confident_col = f"{survey_prefix}_T{text_num}_confident"
+            if trustworthy_col in result.columns and confident_col in result.columns:
+                trustworthy_int = result.iloc[participant_idx][trustworthy_col]
+                confident_int = result.iloc[participant_idx][confident_col]
+                #print(f"Participant {participant_idx + 1}, Text {text_num} → Trustworthy: {trustworthy_int}, Confident: {confident_int}")
+                corr_score = trustworthy_int - confident_int
+                corr_average = (trustworthy_int + trustworthy_int) /2
+                agg_corr_trust_conf.append(corr_score)
+                agg_average_trust_conf.append(corr_average)
+        mean_score = np.mean([abs(x) for x in agg_corr_trust_conf])
+        mean_combined = np.mean(agg_average_trust_conf)
+        agg_corr_trust_conf_per_participant.append(mean_score)
+        agg_average_trust_conf_per_partcipant.append(mean_combined)
+
+    result["mean_abs_trust_conf_diff"] = agg_corr_trust_conf_per_participant #currently i add columns here you do it differently ferdi?
+    result["mean_trust_conf_avg"] = agg_average_trust_conf_per_partcipant 
     return result
 
 #correlate_trust_usage(df_1a, "Sv1a")
-correlate_trust_usage(df_2a, "Sv2a")
+print(correlate_trust_usage(df_2a, "Sv2a").to_string())
 # %%
 
 
