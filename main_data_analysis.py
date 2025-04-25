@@ -2,6 +2,21 @@
 # ========== imports ==========================================================
 # =============================================================================
 
+# What Id do is check if the trust levels differ on any of the trust related items on the questionnaire,
+# i.e. Are people significantly more likely to use a certain source in an essay than they say they trust a source?
+
+# raf and my understanding of samus road plan is as follows:
+
+# 1) to which extent do people not differentiate AI texts from textbook texts?  : find out the ratio of correctly identified texts !
+# 2) are there subgroups of people who are good differentiators?                : look for clusters of people who are good at identifying AI texts
+# 3) if there are -> do significant difference in trust analysis on them        : analyze trust levels among differentiators     
+# 4) also check if the different items on the questionnaire differently predict trust  : is there a pattern in credibility, confidence, and thinking it is AI generated to predict the turst.   
+# 5) if they do, we can combine them or only take a single question             : if we find a pattern we analyze it 
+# 6) do the different survey types change anything in the ratings? i.e. are type a surveys different than type b surveys?  : check if the order has a influecne  the trust levels, creadibility, confidence, and belief,and preception if it is ai generated or not 
+# 7) if yes, how? 
+# 8) if no -> combine data into a single analysis : 
+
+
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
@@ -20,12 +35,12 @@ import re
 # =============================================================================
 
 
-raw_Survey1a = pd.read_csv('file:///Users/ferdinandpaar/Library/Mobile%20Documents/com~apple~CloudDocs/AI_Bachelor/Year_2/TSP_Team_Science_Project/TSP_Data_analysis/SOW-BKI263TSP/Survey1a.csv')
-raw_Survey2a = pd.read_csv('file:///Users/ferdinandpaar/Library/Mobile%20Documents/com~apple~CloudDocs/AI_Bachelor/Year_2/TSP_Team_Science_Project/TSP_Data_analysis/SOW-BKI263TSP/Survey2a.csv')
+raw_Survey1a = pd.read_csv('Survey1a.csv')
+raw_Survey2a = pd.read_csv('Survey2a.csv')
 
 
-raw_Survey1b = pd.read_csv('file:///Users/ferdinandpaar/Library/Mobile%20Documents/com~apple~CloudDocs/AI_Bachelor/Year_2/TSP_Team_Science_Project/TSP_Data_analysis/SOW-BKI263TSP/Survey1b.csv')
-raw_Survey2b = pd.read_csv('file:///Users/ferdinandpaar/Library/Mobile%20Documents/com~apple~CloudDocs/AI_Bachelor/Year_2/TSP_Team_Science_Project/TSP_Data_analysis/SOW-BKI263TSP/Survey2b.csv')
+raw_Survey1b = pd.read_csv('Survey1b.csv')
+raw_Survey2b = pd.read_csv('Survey2b.csv')
 
 # %% ==========================================================================
 # ========== define mappings, data cleaner and processing function ============
