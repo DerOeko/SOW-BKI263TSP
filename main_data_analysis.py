@@ -9,20 +9,37 @@
 
 # 1) to which extent do people not differentiate AI texts from textbook texts?  : find out the ratio of correctly identified texts !
 # 2) are there subgroups of people who are good differentiators?                : look for clusters of people who are good at identifying AI texts
-# 3) if there are -> do significant difference in trust analysis on them        : analyze trust levels among differentiators     
-# 4) also check if the different items on the questionnaire differently predict trust  : is there a pattern in credibility, confidence, and thinking it is AI generated to predict the turst.   
+# 3) if there are -> do significant difference in trust analysis on them        : Raf : don these people trust AI texts more or less than traditional texts? still needs to be defined     
+# 4) also check if the different items on the questionnaire differently predict trust  : is there a pattern in credibility, confidence, and thinking it is AI generated to predict the trust``.   
 # 5) if they do, we can combine them or only take a single question             : if we find a pattern we analyze it 
 # 6) do the different survey types change anything in the ratings? i.e. are type a surveys different than type b surveys?  : check if the order has a influecne  the trust levels, creadibility, confidence, and belief,and preception if it is ai generated or not 
 # 7) if yes, how? 
 # 8) if no -> combine data into a single analysis : 
 
 
+# Survey 2a: Background questions in the back !!!!!!!!!!!!!!!!!!!!!!!!!!!!! makes no sense to me but ok
+
+# https://tsp-c6.limesurvey.net/273257?lang=en
+
+# Survey 1a: Backgorund questions in the front !!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+# https://tsp-c6.limesurvey.net/474256?lang=en
+
+# Survey 2b: Backgorund questions in the front !!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+# https://levi11.limesurvey.net/353824?lang=en
+
+# Survey 1b: Backgorund questions in the back !!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+# https://levi11.limesurvey.net/445568?lang=en
+
+
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 # configure pandas pretty printing
-pd.set_option('display.max_columns', None)
-pd.set_option('display.width', None)
+# pd.set_option('display.max_columns', None)
+# pd.set_option('display.width', None)
 import scipy
 from scipy.stats import binomtest
 import seaborn as sns
@@ -549,7 +566,7 @@ def data_cleaner(
     # build participant_id with suffix
     result["participant_id"] = result["participant_id"].astype(str) + f"_{survey_number}"
     print(survey_number)
-   
+    # result["Background_in_front"] = background_first # check this 
     
     
     # add AI‑generated and correct belief columns if requested
@@ -756,3 +773,41 @@ print(f"df_2b shape: {df_2b.shape}")
 
 # Save the cleaned dataframes to CSV files
 # %%
+
+
+# ==========================================================================
+# ========== Test text performance over all essays  ===================================
+# =============================================================================
+
+# so check if a text is guessed correctly / incorrectly often or not 
+def test_text_performance(df):
+    # create a dict to store the correct counts
+    text_performance = {}
+
+    for i in range(1, 13):
+        col_suffix = f"T{i}_correct_belief"
+        matching_column = [col for col in df.columns if col.endswith(col_suffix)]
+        
+        if matching_column:
+            col = matching_column[0]
+            correct_count_in_precent = df[col].sum() / len(df[col])
+            text_performance[f"Text_{i}"] = correct_count_in_precent
+
+            incorrect_count = len(df) - df[col].sum()
+            # print(f"Text {i}: Correct beliefs: {correct_count_in_precent}, Incorrect beliefs: {incorrect_count}")
+
+    # convert to a DataFrame with one row and texts as columns
+    df_text_performance = pd.DataFrame([text_performance])
+    # print(df_text_performance)
+    return df_text_performance
+    
+
+        
+
+
+print(test_text_performance(df_1a))
+print(test_text_performance(df_2a))
+
+
+#%% 
+
