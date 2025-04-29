@@ -64,11 +64,11 @@ raw_Survey2b = pd.read_csv('file:///Users/ferdinandpaar/Downloads/Survey2b.csv')
 # =============================================================================
 
 
-# for survey 1:
+# for survey 1 this should be a:
 
 # text 1, 2, 4, 7, 8, 9 are traditional 
 # text 3, 5, 6, 10, 11, 12 are ai
-# for survey 2:
+# for survey 2 this should be b:
 # trad texts are 1,2,3,4,5,6
 # ai texts are 7,8,9,10,11,12
 # so surveyX_text_origins= ture means AI generated, false means traditional
@@ -568,7 +568,14 @@ def data_cleaner(
     print(survey_number)
     # result["Background_in_front"] = background_first # check this 
     
-    
+    # drop participants with majority missing trust scores//so the participans that filled out NaN
+    trust_cols = [f"{survey_prefix}_T{i}_trustworthy" for i in range(1, 13)]
+    existing_trust_cols = [col for col in trust_cols if col in result.columns]
+    result["trustworthy_nan_count"] = result[existing_trust_cols].isna().sum(axis=1)
+    result = result[result["trustworthy_nan_count"] <= 4]
+    result.drop(columns=["trustworthy_nan_count"], inplace=True)
+
+
     # add AI‑generated and correct belief columns if requested
     if survey_text_origins is not None and survey_prefix is not None:
         result = create_ai_generated_column(
@@ -711,11 +718,29 @@ total_trials_2a = len(df_2a) * 12
 binom_test_result_2a = binomtest(total_successes_2a, total_trials_2a, 0.5, alternative='greater')
 # print(f"Binomial test result for Survey 2a: {binom_test_result_2a}")
 
+# %%==========================================================================
+# ========== Printing the dataframes ===================================
+# =============================================================================
+
+
+print("df_1a head:")
+print(df_1a.to_string())
+print("df_2a head:")
+print(df_2a.to_string())
+print("df_1b head:")
+print(df_1b.to_string())
+print("df_2b head:")
+print(df_2b.to_string())
+print(f"df_1a shape: {df_1a.shape}")
+print(f"df_2a shape: {df_2a.shape}")
+print(f"df_1b shape: {df_1b.shape}")
+print(f"df_2b shape: {df_2b.shape}")
+
 # %% ==========================================================================
 # ========== Correlating trust with essay confidence usage column ===================================
 # =============================================================================
 
-def correlate_trust_usage(df, survey_prefix="Sv2a"):
+def correlate_trust_usage(df, survey_prefix):
     """
     Correlating the trust in a text and the confidence of the participant in using it in an essay
     Does so by collecting for all the texts per participant the trust and confidence in the text
@@ -760,33 +785,8 @@ def correlate_trust_usage(df, survey_prefix="Sv2a"):
 
 #correlate_trust_usage(df_1a, "Sv1a")
 print(correlate_trust_usage(df_2a, "Sv2a").to_string())
-# %%
 
-
-# %%
-
-print("df_1a head:")
-print(df_1a.to_string())
-print("df_2a head:")
-print(df_2a.to_string())
-print("df_1b head:")
-print(df_1b.to_string())
-print("df_2b head:")
-print(df_2b.to_string())
-
-# print shape
-
-print(f"df_1a shape: {df_1a.shape}")
-print(f"df_2a shape: {df_2a.shape}")
-print(f"df_1b shape: {df_1b.shape}")
-print(f"df_2b shape: {df_2b.shape}")
-
-
-# Save the cleaned dataframes to CSV files
-# %%
-
-
-# ==========================================================================
+# %%=========================================================================
 # ========== Test text performance over all essays  ===================================
 # =============================================================================
 
@@ -890,3 +890,137 @@ model   = smf.ols(formula=formula, data=df_long).fit()
 print(model.summary())
 # %%
 plt.df_2a(column='Sv2a_T1_trustworthy', bins=10)
+# %%=========================================================================
+# ========== Finding the scores for trust,cred,conf ===================================
+# =============================================================================
+def find_scores(df, survey_prefix):
+    """
+    Function that finds trust, credibility, confidence and respective means for dataframe
+    Parameters:
+      df: DataFrame containing the survey data
+      
+    Returns:
+      participant_scores: dictionary (currently) with the scores and their means
+    """
+    df_copy = df.copy()
+    participant_scores = {}
+
+    for participant_idx in range(df_copy.shape[0]): #for each participant
+        trustworthy = []
+        confident = []
+        credible = []
+        for text_num in range(1, 13): #for each text
+            trustworthy_col = f"{survey_prefix}_T{text_num}_trustworthy"
+            confident_col = f"{survey_prefix}_T{text_num}_confident"
+            credible_col = f"{survey_prefix}_T{text_num}_credible"
+            if trustworthy_col in df_copy.columns and confident_col in df_copy.columns and credible_col in df_copy.columns:
+                trustworthy_int = df_copy.iloc[participant_idx][trustworthy_col]
+                confident_int = df_copy.iloc[participant_idx][confident_col]
+                credible_int = df_copy.iloc[participant_idx][credible_col]
+                trustworthy.append(trustworthy_int)
+                confident.append(confident_int)
+                credible.append(credible_int)
+        mean_trustworthy = np.mean(trustworthy)
+        mean_confident = np.mean(confident)
+        mean_credible = np.mean(credible)
+        participant_id = df_copy.iloc[participant_idx]["participant_id"]
+        participant_scores[participant_id] = {
+        "trustworthy": {
+            "values": trustworthy,
+            "mean": mean_trustworthy
+        },
+        "confident": {
+            "values": confident,
+            "mean": mean_confident
+        },
+        "credible": {
+            "values": credible,
+            "mean": mean_credible
+        }
+    }
+    return participant_scores
+
+
+# %%=========================================================================
+# ========== Survey type change anything in the ratings  ===================================
+# =============================================================================
+
+def survey_type_influence(df1a, df2a, df1b, df2b):
+    """
+    Function that checks whether the sruvey type influences the choices made
+    Parameters:
+      df1a: DataFrame containing the survey data, background q's front
+      df2a: DataFrame containing the survey data, background q's back
+      df1b: DataFrame containing the survey data, background q's back
+      df2b: DataFrame containing the survey data, background q's front
+      
+    Returns:
+    """
+    df1a_scores = find_scores(df_1a, "Sv1a")
+    df2a_scores = find_scores(df_2a, "Sv2a")
+    df1b_scores = find_scores(df_1b, "Sv1b")
+    df2b_scores = find_scores(df_2b, "Sv2b")
+
+    #Comparing 1a and 1b
+    #Idea is to plot the scores and check whether there is a difference in between the text 
+
+
+    #Comparing 2a and 2b
+
+    return
+    
+
+#ChatGPT test do not pay al lot of attention to this cell!!!
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
+from scipy.stats import ttest_ind
+
+def survey_type_influence(df_1a, df_2a, df_1b, df_2b):
+    # Get scores
+    df1a_scores = find_scores(df_1a, "Sv1a")
+    df2a_scores = find_scores(df_2a, "Sv2a")
+    df1b_scores = find_scores(df_1b, "Sv1b")
+    df2b_scores = find_scores(df_2b, "Sv2b")
+
+    # Flatten into DataFrame for plotting & stats
+    all_data = []
+    for label, group in zip(
+        ["1a", "2a", "1b", "2b"],
+        [df1a_scores, df2a_scores, df1b_scores, df2b_scores]
+    ):
+        for pid, scores in group.items():
+            all_data.append({
+                "survey_group": label,
+                "participant_id": pid,
+                "mean_trustworthy": scores["trustworthy"]["mean"],
+                "mean_confident": scores["confident"]["mean"],
+                "mean_credible": scores["credible"]["mean"]
+            })
+
+    df_all = pd.DataFrame(all_data)
+
+    # === Plot Trust ===
+    plt.figure(figsize=(10, 5))
+    sns.boxplot(data=df_all, x="survey_group", y="mean_trustworthy")
+    plt.title("Trustworthiness Scores by Survey Type")
+    plt.ylabel("Mean Trustworthiness")
+    plt.xlabel("Survey Group")
+    plt.tight_layout()
+    plt.show()
+
+    # === T-Test example: 1a vs 1b ===
+    trust_1a = df_all[df_all["survey_group"] == "1a"]["mean_trustworthy"]
+    trust_1b = df_all[df_all["survey_group"] == "1b"]["mean_trustworthy"]
+    t_stat, p_val = ttest_ind(trust_1a, trust_1b, nan_policy='omit')
+    print(f"Trustworthiness t-test (1a vs 1b): t={t_stat:.3f}, p={p_val:.3f}")
+
+    # Repeat as needed for confidence or credibility
+
+    return df_all
+
+print(survey_type_influence(df_1a, df_2a, df_1b, df_2b))
+# %%
+
+
