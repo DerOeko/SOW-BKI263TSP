@@ -52,12 +52,12 @@ import re
 # =============================================================================
 
 
-raw_Survey1a = pd.read_csv('Survey1a.csv')
-raw_Survey2a = pd.read_csv('Survey2a.csv')
+raw_Survey1a = pd.read_csv('file:///Users/ferdinandpaar/Downloads/Survey1a.csv')
+raw_Survey2a = pd.read_csv('file:///Users/ferdinandpaar/Downloads/Survey2a.csv')
 
 
-raw_Survey1b = pd.read_csv('Survey1b.csv')
-raw_Survey2b = pd.read_csv('Survey2b.csv')
+raw_Survey1b = pd.read_csv('file:///Users/ferdinandpaar/Downloads/Survey1b.csv')
+raw_Survey2b = pd.read_csv('file:///Users/ferdinandpaar/Downloads/Survey2b.csv')
 
 # %% ==========================================================================
 # ========== define mappings, data cleaner and processing function ============
@@ -116,23 +116,23 @@ survey1a_col_mapping = {
         "Q00. Do_you_agree_to.._": "do_you_agree_to_participate",
         
           # Standard demographic/background questions for Survey 1a
-            "G02Q02_SQ001. What_is_your_fa..__[Faculty_of_Phil.._]": "G02Q02_SQ001",
-            "G02Q02_SQ002. What_is_your_fa..__[Faculty_of_Arts]": "G02Q02_SQ002",
-            "G02Q02_SQ003. What_is_your_fa..__[School_of_Manag.._]": "G02Q02_SQ003",
-            "G02Q02_SQ004. What_is_your_fa..__[Faculty_of_Medi.._]": "G02Q02_SQ004",
-            "G02Q02_SQ005. What_is_your_fa..__[Faculty_of_Science]": "G02Q02_SQ005",
-            "G02Q02_SQ006. What_is_your_fa..[Faculty_of_Law]": "G02Q02_SQ006",
-            "G02Q02_SQ007. What_is_your_fa..__[Faculty_of_Soci.._]": "G02Q02_SQ007",
-            "G02Q03. How_familiar_ar.._": "G02Q03",
-            "G01Q04. How_often_do_yo.._": "G01Q04",
-            "G01Q05. How_often_do_yo.._": "G01Q05",
-            "G02Q06. How_much_do_you.._": "G02Q06",
-            "G02Q07. How_much_do_you.._": "G02Q07",
-            "G01Q08. How_often_do_yo.._": "G01Q08",
-            "G02Q09.  __How_accurate.._": "G02Q09",
-            "G02Q10. Have_you_ever_e.._": "G02Q10",
+            "G02Q02_SQ001. What_is_your_fa..__[Faculty_of_Phil.._]": "Faculty_of_Philosophy",
+            "G02Q02_SQ002. What_is_your_fa..__[Faculty_of_Arts]": "Faculty_of_Arts",
+            "G02Q02_SQ003. What_is_your_fa..__[School_of_Manag.._]": "School_of_Management",
+            "G02Q02_SQ004. What_is_your_fa..__[Faculty_of_Medi.._]": "Faculty_of_Medicine",
+            "G02Q02_SQ005. What_is_your_fa..__[Faculty_of_Science]": "Faculty_of_Science",
+            "G02Q02_SQ006. What_is_your_fa..[Faculty_of_Law]": "Faculty_of_Law",
+            "G02Q02_SQ007. What_is_your_fa..__[Faculty_of_Soci.._]": "Faculty_of_Social_Science",
+            "G02Q03. How_familiar_ar.._": "Familiar_with_AI",
+            "G01Q04. How_often_do_yo.._": "Tratditional_usage",
+            "G01Q05. How_often_do_yo.._": "ChatGPT_usage_amount",
+            "G02Q06. How_much_do_you.._": "trust_traditional",
+            "G02Q07. How_much_do_you.._": "trust_ChatGPT",
+            "G01Q08. How_often_do_yo.._": "doublechecking_ChatGPT",
+            "G02Q09.  __How_accurate.._": "accuracy_ChatGPT_study",
+            "G02Q10. Have_you_ever_e.._": "was_traditionaly_wrong",
             "G01Q11. Regarding_the_q.._": "G01Q11",
-            "G01Q12. Have_you_ever_e.._": "G01Q12",
+            "G01Q12. Have_you_ever_e.._": "was_ChatGPT_wrong",
             "G01Q13. Regarding_the_q.._": "G01Q13",
             "G02Q14. Is_there_anythi.._": "G02Q14",
         
@@ -222,23 +222,23 @@ survey2a_col_mapping= {
             "Q00. Do_you_agree_to.._": "do_you_agree_to_participate",
             
             # Standard demographic/background questions for Survey 2a
-            "G02Q02_SQ001. What_is_your_fa..__[Faculty_of_Phil.._]": "G02Q02_SQ001",
-            "G02Q02_SQ002. What_is_your_fa..__[Faculty_of_Arts]": "G02Q02_SQ002",
-            "G02Q02_SQ003. What_is_your_fa..__[School_of_Manag.._]": "G02Q02_SQ003",
-            "G02Q02_SQ004. What_is_your_fa..__[Faculty_of_Medi.._]": "G02Q02_SQ004",
-            "G02Q02_SQ005. What_is_your_fa..__[Faculty_of_Science]": "G02Q02_SQ005",
-            "G02Q02_SQ006. What_is_your_fa..__[Faculty_of_Law]": "G02Q02_SQ006",
-            "G02Q02_SQ007. What_is_your_fa..__[Faculty_of_Soci.._]": "G02Q02_SQ007",
-            "G02Q03. How_familiar_ar.._": "G02Q03",
-            "G01Q04. How_often_do_yo.._": "G01Q04",
-            "G01Q05. How_often_do_yo.._": "G01Q05",
-            "G02Q06. How_much_do_you.._": "G02Q06",
-            "G02Q07. How_much_do_you.._": "G02Q07",
-            "G01Q08. How_often_do_yo.._": "G01Q08",
-            "G02Q09.  __How_accurate.._": "G02Q09",
-            "G02Q10. Have_you_ever_e.._": "G02Q10",
+            "G02Q02_SQ001. What_is_your_fa..__[Faculty_of_Phil.._]": "Faculty_of_Philosophy",
+            "G02Q02_SQ002. What_is_your_fa..__[Faculty_of_Arts]": "Faculty_of_Arts",
+            "G02Q02_SQ003. What_is_your_fa..__[School_of_Manag.._]": "School_of_Management",
+            "G02Q02_SQ004. What_is_your_fa..__[Faculty_of_Medi.._]": "Faculty_of_Medicine",
+            "G02Q02_SQ005. What_is_your_fa..__[Faculty_of_Science]": "Faculty_of_Science",
+            "G02Q02_SQ006. What_is_your_fa..[Faculty_of_Law]": "Faculty_of_Law",
+            "G02Q02_SQ007. What_is_your_fa..__[Faculty_of_Soci.._]": "Faculty_of_Social_Science",
+            "G02Q03. How_familiar_ar.._": "Familiar_with_AI",
+            "G01Q04. How_often_do_yo.._": "Tratditional_usage",
+            "G01Q05. How_often_do_yo.._": "ChatGPT_usage_amount",
+            "G02Q06. How_much_do_you.._": "trust_traditional",
+            "G02Q07. How_much_do_you.._": "trust_ChatGPT",
+            "G01Q08. How_often_do_yo.._": "doublechecking_ChatGPT",
+            "G02Q09.  __How_accurate.._": "accuracy_ChatGPT_study",
+            "G02Q10. Have_you_ever_e.._": "was_traditionaly_wrong",
             "G01Q11. Regarding_the_q.._": "G01Q11",
-            "G01Q12. Have_you_ever_e.._": "G01Q12",
+            "G01Q12. Have_you_ever_e.._": "was_ChatGPT_wrong",
             "G01Q13. Regarding_the_q.._": "G01Q13",
             "G02Q14. Is_there_anythi.._": "G02Q14",
             
@@ -327,23 +327,23 @@ survey1b_col_mapping= {
         "Q00. Do_you_agree_to.._": "do_you_agree_to_participate",
         
         # Standard demographic/background questions for Survey 1b
-        "G02Q02_SQ001. What_is_your_fa..__[Faculty_of_Phil.._]": "G02Q02_SQ001",
-        "G02Q02_SQ002. What_is_your_fa..__[Faculty_of_Arts]": "G02Q02_SQ002",
-        "G02Q02_SQ003. What_is_your_fa..__[School_of_Manag.._]": "G02Q02_SQ003",
-        "G02Q02_SQ004. What_is_your_fa..__[Faculty_of_Medi.._]": "G02Q02_SQ004",
-        "G02Q02_SQ005. What_is_your_fa..__[Faculty_of_Science]": "G02Q02_SQ005",
-        "G02Q02_SQ006. What_is_your_fa..__[Faculty_of_Law]": "G02Q02_SQ006",
-        "G02Q02_SQ007. What_is_your_fa..__[Faculty_of_Soci.._]": "G02Q02_SQ007",
-        "G02Q03. How_familiar_ar.._": "G02Q03",
-        "G01Q04. How_often_do_yo.._": "G01Q04",
-        "G01Q05. How_often_do_yo.._": "G01Q05",
-        "G02Q06. How_much_do_you.._": "G02Q06",
-        "G02Q07. How_much_do_you.._": "G02Q07",
-        "G01Q08. How_often_do_yo.._": "G01Q08",
-        "G02Q09.  __How_accurate.._": "G02Q09",
-        "G02Q10. Have_you_ever_e.._": "G02Q10",
+       "G02Q02_SQ001. What_is_your_fa..__[Faculty_of_Phil.._]": "Faculty_of_Philosophy",
+        "G02Q02_SQ002. What_is_your_fa..__[Faculty_of_Arts]": "Faculty_of_Arts",
+        "G02Q02_SQ003. What_is_your_fa..__[School_of_Manag.._]": "School_of_Management",
+        "G02Q02_SQ004. What_is_your_fa..__[Faculty_of_Medi.._]": "Faculty_of_Medicine",
+        "G02Q02_SQ005. What_is_your_fa..__[Faculty_of_Science]": "Faculty_of_Science",
+        "G02Q02_SQ006. What_is_your_fa..[Faculty_of_Law]": "Faculty_of_Law",
+        "G02Q02_SQ007. What_is_your_fa..__[Faculty_of_Soci.._]": "Faculty_of_Social_Science",
+        "G02Q03. How_familiar_ar.._": "Familiar_with_AI",
+        "G01Q04. How_often_do_yo.._": "Tratditional_usage",
+        "G01Q05. How_often_do_yo.._": "ChatGPT_usage_amount",
+        "G02Q06. How_much_do_you.._": "trust_traditional",
+        "G02Q07. How_much_do_you.._": "trust_ChatGPT",
+        "G01Q08. How_often_do_yo.._": "doublechecking_ChatGPT",
+        "G02Q09.  __How_accurate.._": "accuracy_ChatGPT_study",
+        "G02Q10. Have_you_ever_e.._": "was_traditionaly_wrong",
         "G01Q11. Regarding_the_q.._": "G01Q11",
-        "G01Q12. Have_you_ever_e.._": "G01Q12",
+        "G01Q12. Have_you_ever_e.._": "was_ChatGPT_wrong",
         "G01Q13. Regarding_the_q.._": "G01Q13",
         "G02Q14. Is_there_anythi.._": "G02Q14",
         
@@ -432,23 +432,23 @@ survey2b_col_mapping= {
         "Q00. Do_you_agree_to.._": "do_you_agree_to_participate",
         
         # Standard demographic/background questions for Survey 2b
-        "G02Q02_SQ001. What_is_your_fa..__[Faculty_of_Phil.._]": "G02Q02_SQ001",
-        "G02Q02_SQ002. What_is_your_fa..__[Faculty_of_Arts]": "G02Q02_SQ002",
-        "G02Q02_SQ003. What_is_your_fa..__[School_of_Manag.._]": "G02Q02_SQ003",
-        "G02Q02_SQ004. What_is_your_fa..__[Faculty_of_Medi.._]": "G02Q02_SQ004",
-        "G02Q02_SQ005. What_is_your_fa..__[Faculty_of_Science]": "G02Q02_SQ005",
-        "G02Q02_SQ006. What_is_your_fa..__[Faculty_of_Law]": "G02Q02_SQ006",
-        "G02Q02_SQ007. What_is_your_fa..__[Faculty_of_Soci.._]": "G02Q02_SQ007",
-        "G02Q03. How_familiar_ar.._": "G02Q03",
-        "G01Q04. How_often_do_yo.._": "G01Q04",
-        "G01Q05. How_often_do_yo.._": "G01Q05",
-        "G02Q06. How_much_do_you.._": "G02Q06",
-        "G02Q07. How_much_do_you.._": "G02Q07",
-        "G01Q08. How_often_do_yo.._": "G01Q08",
-        "G02Q09.  __How_accurate.._": "G02Q09",
-        "G02Q10. Have_you_ever_e.._": "G02Q10",
+        "G02Q02_SQ001. What_is_your_fa..__[Faculty_of_Phil.._]": "Faculty_of_Philosophy",
+        "G02Q02_SQ002. What_is_your_fa..__[Faculty_of_Arts]": "Faculty_of_Arts",
+        "G02Q02_SQ003. What_is_your_fa..__[School_of_Manag.._]": "School_of_Management",
+        "G02Q02_SQ004. What_is_your_fa..__[Faculty_of_Medi.._]": "Faculty_of_Medicine",
+        "G02Q02_SQ005. What_is_your_fa..__[Faculty_of_Science]": "Faculty_of_Science",
+        "G02Q02_SQ006. What_is_your_fa..[Faculty_of_Law]": "Faculty_of_Law",
+        "G02Q02_SQ007. What_is_your_fa..__[Faculty_of_Soci.._]": "Faculty_of_Social_Science",
+        "G02Q03. How_familiar_ar.._": "Familiar_with_AI",
+        "G01Q04. How_often_do_yo.._": "Tratditional_usage",
+        "G01Q05. How_often_do_yo.._": "ChatGPT_usage_amount",
+        "G02Q06. How_much_do_you.._": "trust_traditional",
+        "G02Q07. How_much_do_you.._": "trust_ChatGPT",
+        "G01Q08. How_often_do_yo.._": "doublechecking_ChatGPT",
+        "G02Q09.  __How_accurate.._": "accuracy_ChatGPT_study",
+        "G02Q10. Have_you_ever_e.._": "was_traditionaly_wrong",
         "G01Q11. Regarding_the_q.._": "G01Q11",
-        "G01Q12. Have_you_ever_e.._": "G01Q12",
+        "G01Q12. Have_you_ever_e.._": "was_ChatGPT_wrong",
         "G01Q13. Regarding_the_q.._": "G01Q13",
         "G02Q14. Is_there_anythi.._": "G02Q14",
         
@@ -819,6 +819,74 @@ def test_text_performance(df):
 print(test_text_performance(df_1a))
 print(test_text_performance(df_2a))
 
+def combinded_text_perfomace_by_a_b(df_1a, df_2a):
+    # create a dict to store the correct counts
+    text_performance = {}
 
-#%% 
+    for i in range(1, 13):
+        col_suffix = f"T{i}_correct_belief"
+        matching_column = [col for col in df_1a.columns if col.endswith(col_suffix)]
+        
+        if matching_column:
+            col = matching_column[0]
+            correct_count_in_precent = df_1a[col].sum() / len(df_1a[col])
+            text_performance[f"Text_{i}"] = correct_count_in_precent
 
+            incorrect_count = len(df_1a) - df_1a[col].sum()
+            # print(f"Text {i}: Correct beliefs: {correct_count_in_precent}, Incorrect beliefs: {incorrect_count}")
+
+    # convert to a DataFrame with one row and texts as columns
+    df_text_performance = pd.DataFrame([text_performance])
+    # print(df_text_performance)
+    return df_text_performance
+print(combinded_text_perfomace_by_a_b(df_1a, df_2a))
+print(combinded_text_perfomace_by_a_b(df_1b, df_2b))
+
+# %% ==========================================================================
+#==== Multiple regression model ========================================
+# =============================================================================
+import statsmodels.api as sm
+import statsmodels.formula.api as smf
+
+
+
+
+#%%
+
+# melt trust, cred, conf, belief and ai flags into long form
+df_trust = df_2a.melt(
+    id_vars=['participant_id'],
+    value_vars=[f'Sv2a_T{i}_trustworthy'   for i in range(1,13)],
+    var_name='text', value_name='trustworthy'
+)
+df_cred  = df_2a.melt( id_vars=['participant_id'],
+                       value_vars=[f'Sv2a_T{i}_credible'     for i in range(1,13)],
+                       var_name='text', value_name='credible')
+df_conf  = df_2a.melt( id_vars=['participant_id'],
+                       value_vars=[f'Sv2a_T{i}_confident'    for i in range(1,13)],
+                       var_name='text', value_name='confident')
+df_bel   = df_2a.melt( id_vars=['participant_id'],
+                       value_vars=[f'Sv2a_T{i}_belief'       for i in range(1,13)],
+                       var_name='text', value_name='belief')
+df_ai    = df_2a.melt( id_vars=['participant_id'],
+                       value_vars=[f'Sv2a_T{i}_ai_generated' for i in range(1,13)],
+                       var_name='text', value_name='ai_generated')
+
+# strip the “Sv2a_” prefix so you can merge on just “text”
+for df_ in (df_trust, df_cred, df_conf, df_bel, df_ai):
+    df_['text'] = df_['text'].str.replace(r'^Sv2a_T(\d+)_.+$', r'T\1', regex=True)
+
+# merge them all
+df_long = (df_trust
+           .merge(df_cred,  on=['participant_id','text'])
+           .merge(df_conf,  on=['participant_id','text'])
+           .merge(df_bel,   on=['participant_id','text'])
+           .merge(df_ai,    on=['participant_id','text'])
+)
+
+# now run one regression for every row
+formula = 'trustworthy ~ credible + confident + belief + ai_generated'
+model   = smf.ols(formula=formula, data=df_long).fit()
+print(model.summary())
+# %%
+plt.df_2a(column='Sv2a_T1_trustworthy', bins=10)
