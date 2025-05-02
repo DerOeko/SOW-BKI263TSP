@@ -898,13 +898,16 @@ def analyze_per_participant(df, survey_prefix):
 
 # Example of how to use it:
 belief_coefficients_df_2a = analyze_per_participant(df_2a, "Sv2a")
+belief_coefficients_df_1a = analyze_per_participant(df_1a, "Sv1a")
+belief_coefficients_df_1b = analyze_per_participant(df_1b, "Sv1b")
+belief_coefficients_df_2b = analyze_per_participant(df_2b, "Sv2b")
 print(type(belief_coefficients_df_2a)   )
 
 # Now you would merge 'belief_coefficients_df_2a' with your background data
 # and then analyze the correlation with the AI trust measures.
     
 
-def compare_belief_coefficients_2_background(belief_coefficients_df_2a, df_background):
+def compare_belief_coefficients_2_background(belief_coefficients_df, df_background):
     """
     Compare belief coefficients with background data.
     
@@ -915,18 +918,23 @@ def compare_belief_coefficients_2_background(belief_coefficients_df_2a, df_backg
     Returns:
       Merged DataFrame with belief coefficients and background data
     """
-    belief_coefficients_df_2a = belief_coefficients_df_2a.reset_index().rename(columns={"index": "participant_id"})
+    belief_coefficients_df = belief_coefficients_df.reset_index().rename(columns={"index": "participant_id"})
     # Merge on participant_id
-    merged_df = pd.merge(df_background, belief_coefficients_df_2a, on="participant_id", how="inner")
+    merged_df = pd.merge(df_background, belief_coefficients_df, on="participant_id", how="inner")
     
     # Now you can analyze the merged DataFrame
     return merged_df
 
-df_background = df_2a[['participant_id', "Familiar_with_AI", "ChatGPT_usage_amount", "trust_ChatGPT", "trust_traditional", "doublechecking_ChatGPT"]]
-print(df_background.to_string())
-print(belief_coefficients_df_2a.to_string())
+# df_background_2a = df_2a[['participant_id', "Familiar_with_AI", "ChatGPT_usage_amount", "trust_ChatGPT", "trust_traditional", "doublechecking_ChatGPT"]]
+# print(df_background_2a.to_string())
+# print(belief_coefficients_df_2a.to_string())s
 
-belief_coefficients_df_2a = compare_belief_coefficients_2_background(belief_coefficients_df_2a, df_background)
+
+belief_coefficients_df_1a = compare_belief_coefficients_2_background(belief_coefficients_df_1a, df_1a)
+belief_coefficients_df_2a = compare_belief_coefficients_2_background(belief_coefficients_df_2a, df_2a)
+belief_coefficients_df_1b = compare_belief_coefficients_2_background(belief_coefficients_df_1b, df_1b)
+belief_coefficients_df_2b = compare_belief_coefficients_2_background(belief_coefficients_df_2b, df_2b)
+
 
 print(belief_coefficients_df_2a.to_string())
 
@@ -936,47 +944,55 @@ print(belief_coefficients_df_2a.to_string())
 # =============================================================================
 # %%
 
-df = belief_coefficients_df_2a
+
+
 import matplotlib.pyplot as plt
 import seaborn as sns
+def plot_belief_coefficients(df):
+    # 1. Belief Coefficient vs. Trust in Traditional Media
+    sns.scatterplot(data=df, x='trust_traditional', y='belief_coefficient')
+    plt.title('Belief Coefficient vs. Trust in Traditional Media')
+    plt.xlabel('Trust in Traditional Media')
+    plt.ylabel('Belief Coefficient')
+    plt.show()
 
-# 1. Belief Coefficient vs. Trust in Traditional Media
-sns.scatterplot(data=df, x='trust_traditional', y='belief_coefficient')
-plt.title('Belief Coefficient vs. Trust in Traditional Media')
-plt.xlabel('Trust in Traditional Media')
-plt.ylabel('Belief Coefficient')
-plt.show()
+    # 2. Belief Coefficient vs. Double-Checking ChatGPT
+    sns.scatterplot(data=df, x='doublechecking_ChatGPT', y='belief_coefficient')
+    plt.title('Belief Coefficient vs. Double-Checking ChatGPT')
+    plt.xlabel('How Often They Double-Check ChatGPT')
+    plt.ylabel('Belief Coefficient')
+    plt.show()
 
-# 2. Belief Coefficient vs. Double-Checking ChatGPT
-sns.scatterplot(data=df, x='doublechecking_ChatGPT', y='belief_coefficient')
-plt.title('Belief Coefficient vs. Double-Checking ChatGPT')
-plt.xlabel('How Often They Double-Check ChatGPT')
-plt.ylabel('Belief Coefficient')
-plt.show()
+    # 3. Combined Plot: Belief Coefficient vs. Trust in ChatGPT, Colored by Double-Checking
+    sns.scatterplot(data=df, x='trust_ChatGPT', y='belief_coefficient', hue='doublechecking_ChatGPT')
+    plt.title('Belief Coefficient vs. Trust in ChatGPT, Colored by Double-Checking')
+    plt.xlabel('Trust in ChatGPT')
+    plt.ylabel('Belief Coefficient')
+    plt.legend(title='Double-Checking ChatGPT')
+    plt.show()
 
-# 3. Combined Plot: Belief Coefficient vs. Trust in ChatGPT, Colored by Double-Checking
-sns.scatterplot(data=df, x='trust_ChatGPT', y='belief_coefficient', hue='doublechecking_ChatGPT')
-plt.title('Belief Coefficient vs. Trust in ChatGPT, Colored by Double-Checking')
-plt.xlabel('Trust in ChatGPT')
-plt.ylabel('Belief Coefficient')
-plt.legend(title='Double-Checking ChatGPT')
-plt.show()
+    # 4. Box Plots of Belief Coefficient by Categorical Variables
+    sns.boxplot(data=df, x='ChatGPT_usage_amount', y='belief_coefficient')
+    plt.title('Belief Coefficient by ChatGPT Usage Amount')
+    plt.xlabel('ChatGPT Usage Amount')
+    plt.ylabel('Belief Coefficient')
+    plt.show()
 
-# 4. Box Plots of Belief Coefficient by Categorical Variables
-sns.boxplot(data=df, x='ChatGPT_usage_amount', y='belief_coefficient')
-plt.title('Belief Coefficient by ChatGPT Usage Amount')
-plt.xlabel('ChatGPT Usage Amount')
-plt.ylabel('Belief Coefficient')
-plt.show()
+    sns.boxplot(data=df, x='doublechecking_ChatGPT', y='belief_coefficient')
+    plt.title('Belief Coefficient by Double-Checking ChatGPT')
+    plt.xlabel('How Often They Double-Check ChatGPT')
+    plt.ylabel('Belief Coefficient')
+    plt.show()
 
-sns.boxplot(data=df, x='doublechecking_ChatGPT', y='belief_coefficient')
-plt.title('Belief Coefficient by Double-Checking ChatGPT')
-plt.xlabel('How Often They Double-Check ChatGPT')
-plt.ylabel('Belief Coefficient')
-plt.show()
+    # 5. Scatter Matrix (Pair Plot)
+    sns.pairplot(df[['belief_coefficient', 'Familiar_with_AI', 'trust_ChatGPT', 'trust_traditional']])
+    plt.suptitle('Pair Plot of Belief Coefficient and Trust Measures', y=1.02)
+    plt.show()
 
-# 5. Scatter Matrix (Pair Plot)
-sns.pairplot(df[['belief_coefficient', 'Familiar_with_AI', 'trust_ChatGPT', 'trust_traditional']])
-plt.suptitle('Pair Plot of Belief Coefficient and Trust Measures', y=1.02)
-plt.show()
+plot_belief_coefficients(belief_coefficients_df_1a)
+plot_belief_coefficients(belief_coefficients_df_2a)
+
+plot_belief_coefficients(belief_coefficients_df_1b)
+plot_belief_coefficients(belief_coefficients_df_2b)
+
 # %%
