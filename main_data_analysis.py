@@ -559,7 +559,7 @@ def data_cleaner(
     result = result[result["do_you_agree_to_participate"] == "Yes"]
 
     # filter out participants who did not complete the survey
-    result = result.dropna(subset=['G02Q02_SQ001'])
+    result = result.dropna(subset=['Faculty_of_Philosophy'])
     # drop irrelevant columns
     result = result.drop(columns=["submitdate", "startlanguage", "seed"])
     
@@ -694,48 +694,25 @@ df_2b = data_cleaner(
     survey_text_origins=survey2_text_origins,
     survey_prefix="Sv2b"
 )
-# For Survey 1a:
-# Create a new column aggregating correct answers from all texts
-df_1a["aggregated_correct_belief"] = df_1a.filter(like="_correct_belief").sum(axis=1)
 
-# Total correct responses across all participants:
-total_successes_1a = int(df_1a["aggregated_correct_belief"].sum())
-# Total trials is the number of participants multiplied by 12
-total_trials_1a = len(df_1a) * 12
-
-
-from scipy.stats import binomtest
-# Example hypothesis: testing if the correct response rate exceeds 50%
-binom_test_result_1a = binomtest(total_successes_1a, total_trials_1a, 0.5, alternative='greater')
-# print(f"Binomial test result for Survey 1a: {binom_test_result_1a}")
-
-# For Survey 2a (make sure to use df_2a, not df_2b):
-df_2a["aggregated_correct_belief"] = df_2a.filter(like="_correct_belief").sum(axis=1)
-total_successes_2a = int(df_2a["aggregated_correct_belief"].sum())
-total_trials_2a = len(df_2a) * 12
-
-
-
-binom_test_result_2a = binomtest(total_successes_2a, total_trials_2a, 0.5, alternative='greater')
-# print(f"Binomial test result for Survey 2a: {binom_test_result_2a}")
 
 # %%==========================================================================
 # ========== Printing the dataframes ===================================
 # =============================================================================
 
 
-print("df_1a head:")
-print(df_1a.to_string())
-print("df_2a head:")
-print(df_2a.to_string())
-print("df_1b head:")
-print(df_1b.to_string())
-print("df_2b head:")
-print(df_2b.to_string())
-print(f"df_1a shape: {df_1a.shape}")
-print(f"df_2a shape: {df_2a.shape}")
-print(f"df_1b shape: {df_1b.shape}")
-print(f"df_2b shape: {df_2b.shape}")
+# print("df_1a head:")
+# print(df_1a.to_string())
+# print("df_2a head:")
+# print(df_2a.to_string())
+# print("df_1b head:")
+# print(df_1b.to_string())
+# print("df_2b head:")
+# print(df_2b.to_string())
+# print(f"df_1a shape: {df_1a.shape}")
+# print(f"df_2a shape: {df_2a.shape}")
+# print(f"df_1b shape: {df_1b.shape}")
+# print(f"df_2b shape: {df_2b.shape}")
 
 # %% ==========================================================================
 # ========== Correlating trust with essay confidence usage column ===================================
@@ -846,178 +823,160 @@ print(combinded_text_perfomace_by_a_b(df_1b, df_2b))
 # %% ==========================================================================
 #==== Multiple regression model ========================================
 # =============================================================================
-import statsmodels.api as sm
+
+
+# %%=========================================================================
+# ========== Multi regression model per participant  ===================================
+# =============================================================================
+import pandas as pd
 import statsmodels.formula.api as smf
 
+def run_regression_for_participant(df_participant, survey_prefix):
+    """Runs a regression model for a single participant."""
+    if len(df_participant) < 1:  # Handle cases with no data
+        return None
 
+    df_trust = df_participant.melt(
+        id_vars=['participant_id'],
+        value_vars=[f'{survey_prefix}_T{i}_trustworthy' for i in range(1, 13)],
+        var_name='text', value_name='trustworthy'
+    )
+    df_cred = df_participant.melt(
+        id_vars=['participant_id'],
+        value_vars=[f'{survey_prefix}_T{i}_credible' for i in range(1, 13)],
+        var_name='text', value_name='credible'
+    )
+    df_conf = df_participant.melt(
+        id_vars=['participant_id'],
+        value_vars=[f'{survey_prefix}_T{i}_confident' for i in range(1, 13)],
+        var_name='text', value_name='confident'
+    )
+    df_bel = df_participant.melt(
+        id_vars=['participant_id'],
+        value_vars=[f'{survey_prefix}_T{i}_belief' for i in range(1, 13)],
+        var_name='text', value_name='belief'
+    )
+    df_ai = df_participant.melt(
+        id_vars=['participant_id'],
+        value_vars=[f'{survey_prefix}_T{i}_ai_generated' for i in range(1, 13)],
+        var_name='text', value_name='ai_generated'
+    )
 
+    for df_ in (df_trust, df_cred, df_conf, df_bel, df_ai):
+        df_['text'] = df_['text'].str.replace(rf'^{survey_prefix}_T(\d+)_.+$', r'T\1', regex=True)
 
-#%%
+    df_long_participant = (df_trust
+                           .merge(df_cred, on=['participant_id', 'text'])
+                           .merge(df_conf, on=['participant_id', 'text'])
+                           .merge(df_bel, on=['participant_id', 'text'])
+                           .merge(df_ai, on=['participant_id', 'text'])
+                           )
 
-# melt trust, cred, conf, belief and ai flags into long form
-df_trust = df_2a.melt(
-    id_vars=['participant_id'],
-    value_vars=[f'Sv2a_T{i}_trustworthy'   for i in range(1,13)],
-    var_name='text', value_name='trustworthy'
-)
-df_cred  = df_2a.melt( id_vars=['participant_id'],
-                       value_vars=[f'Sv2a_T{i}_credible'     for i in range(1,13)],
-                       var_name='text', value_name='credible')
-df_conf  = df_2a.melt( id_vars=['participant_id'],
-                       value_vars=[f'Sv2a_T{i}_confident'    for i in range(1,13)],
-                       var_name='text', value_name='confident')
-df_bel   = df_2a.melt( id_vars=['participant_id'],
-                       value_vars=[f'Sv2a_T{i}_belief'       for i in range(1,13)],
-                       var_name='text', value_name='belief')
-df_ai    = df_2a.melt( id_vars=['participant_id'],
-                       value_vars=[f'Sv2a_T{i}_ai_generated' for i in range(1,13)],
-                       var_name='text', value_name='ai_generated')
+    if len(df_long_participant) > 0:
+        formula = 'trustworthy ~ credible + confident + belief + ai_generated'
+        model = smf.ols(formula=formula, data=df_long_participant).fit()
+        return model.params  # Or model.summary().tables[1] for coefficients and p-values
+    else:
+        return None
 
-# strip the “Sv2a_” prefix so you can merge on just “text”
-for df_ in (df_trust, df_cred, df_conf, df_bel, df_ai):
-    df_['text'] = df_['text'].str.replace(r'^Sv2a_T(\d+)_.+$', r'T\1', regex=True)
+def analyze_per_participant(df, survey_prefix):
+    """Runs regression for each participant and collects the 'belief' coefficient."""
+    unique_participants = df['participant_id'].unique()
+    all_participant_results = {}
 
-# merge them all
-df_long = (df_trust
-           .merge(df_cred,  on=['participant_id','text'])
-           .merge(df_conf,  on=['participant_id','text'])
-           .merge(df_bel,   on=['participant_id','text'])
-           .merge(df_ai,    on=['participant_id','text'])
-)
+    for participant in unique_participants:
+        df_participant = df[df['participant_id'] == participant].copy()
+        model_results = run_regression_for_participant(df_participant, survey_prefix)
+        if model_results is not None and 'belief[T.Yes]' in model_results:
+            all_participant_results[participant] = model_results['belief[T.Yes]']
+        elif model_results is not None and 'belief[T.True]' in model_results: # Adjust based on your belief coding
+            all_participant_results[participant] = model_results['belief[T.True]']
+        else:
+            all_participant_results[participant] = None # Or some other indicator
 
-# now run one regression for every row
-formula = 'trustworthy ~ credible + confident + belief + ai_generated'
-model   = smf.ols(formula=formula, data=df_long).fit()
-print(model.summary())
-# %%
-plt.df_2a(column='Sv2a_T1_trustworthy', bins=10)
-# %%=========================================================================
-# ========== Finding the scores for trust,cred,conf ===================================
-# =============================================================================
-def find_scores(df, survey_prefix):
+    return pd.DataFrame.from_dict(all_participant_results, orient='index', columns=['belief_coefficient'])
+
+# Example of how to use it:
+belief_coefficients_df_2a = analyze_per_participant(df_2a, "Sv2a")
+print(type(belief_coefficients_df_2a)   )
+
+# Now you would merge 'belief_coefficients_df_2a' with your background data
+# and then analyze the correlation with the AI trust measures.
+    
+
+def compare_belief_coefficients_2_background(belief_coefficients_df_2a, df_background):
     """
-    Function that finds trust, credibility, confidence and respective means for dataframe
+    Compare belief coefficients with background data.
+    
     Parameters:
-      df: DataFrame containing the survey data
+      df_belief: DataFrame containing belief coefficients
+      df_background: DataFrame containing background data
       
     Returns:
-      participant_scores: dictionary (currently) with the scores and their means
+      Merged DataFrame with belief coefficients and background data
     """
-    df_copy = df.copy()
-    participant_scores = {}
+    belief_coefficients_df_2a = belief_coefficients_df_2a.reset_index().rename(columns={"index": "participant_id"})
+    # Merge on participant_id
+    merged_df = pd.merge(df_background, belief_coefficients_df_2a, on="participant_id", how="inner")
+    
+    # Now you can analyze the merged DataFrame
+    return merged_df
 
-    for participant_idx in range(df_copy.shape[0]): #for each participant
-        trustworthy = []
-        confident = []
-        credible = []
-        for text_num in range(1, 13): #for each text
-            trustworthy_col = f"{survey_prefix}_T{text_num}_trustworthy"
-            confident_col = f"{survey_prefix}_T{text_num}_confident"
-            credible_col = f"{survey_prefix}_T{text_num}_credible"
-            if trustworthy_col in df_copy.columns and confident_col in df_copy.columns and credible_col in df_copy.columns:
-                trustworthy_int = df_copy.iloc[participant_idx][trustworthy_col]
-                confident_int = df_copy.iloc[participant_idx][confident_col]
-                credible_int = df_copy.iloc[participant_idx][credible_col]
-                trustworthy.append(trustworthy_int)
-                confident.append(confident_int)
-                credible.append(credible_int)
-        mean_trustworthy = np.mean(trustworthy)
-        mean_confident = np.mean(confident)
-        mean_credible = np.mean(credible)
-        participant_id = df_copy.iloc[participant_idx]["participant_id"]
-        participant_scores[participant_id] = {
-        "trustworthy": {
-            "values": trustworthy,
-            "mean": mean_trustworthy
-        },
-        "confident": {
-            "values": confident,
-            "mean": mean_confident
-        },
-        "credible": {
-            "values": credible,
-            "mean": mean_credible
-        }
-    }
-    return participant_scores
+df_background = df_2a[['participant_id', "Familiar_with_AI", "ChatGPT_usage_amount", "trust_ChatGPT", "trust_traditional", "doublechecking_ChatGPT"]]
+print(df_background.to_string())
+print(belief_coefficients_df_2a.to_string())
+
+belief_coefficients_df_2a = compare_belief_coefficients_2_background(belief_coefficients_df_2a, df_background)
+
+print(belief_coefficients_df_2a.to_string())
 
 
 # %%=========================================================================
 # ========== Survey type change anything in the ratings  ===================================
 # =============================================================================
-
-def survey_type_influence(df1a, df2a, df1b, df2b):
-    """
-    Function that checks whether the sruvey type influences the choices made
-    Parameters:
-      df1a: DataFrame containing the survey data, background q's front
-      df2a: DataFrame containing the survey data, background q's back
-      df1b: DataFrame containing the survey data, background q's back
-      df2b: DataFrame containing the survey data, background q's front
-      
-    Returns:
-    """
-    df1a_scores = find_scores(df_1a, "Sv1a")
-    df2a_scores = find_scores(df_2a, "Sv2a")
-    df1b_scores = find_scores(df_1b, "Sv1b")
-    df2b_scores = find_scores(df_2b, "Sv2b")
-
-    #Comparing 1a and 1b
-    #Idea is to plot the scores and check whether there is a difference in between the text 
-
-
-    #Comparing 2a and 2b
-
-    return
-    
-
-#ChatGPT test do not pay al lot of attention to this cell!!!
-
-
-def survey_type_influence(df_1a, df_2a, df_1b, df_2b):
-    # Get scores
-    df1a_scores = find_scores(df_1a, "Sv1a")
-    df2a_scores = find_scores(df_2a, "Sv2a")
-    df1b_scores = find_scores(df_1b, "Sv1b")
-    df2b_scores = find_scores(df_2b, "Sv2b")
-
-    # Flatten into DataFrame for plotting & stats
-    all_data = []
-    for label, group in zip(
-        ["1a", "2a", "1b", "2b"],
-        [df1a_scores, df2a_scores, df1b_scores, df2b_scores]
-    ):
-        for pid, scores in group.items():
-            all_data.append({
-                "survey_group": label,
-                "participant_id": pid,
-                "mean_trustworthy": scores["trustworthy"]["mean"],
-                "mean_confident": scores["confident"]["mean"],
-                "mean_credible": scores["credible"]["mean"]
-            })
-
-    df_all = pd.DataFrame(all_data)
-
-    # === Plot Trust ===
-    plt.figure(figsize=(10, 5))
-    sns.boxplot(data=df_all, x="survey_group", y="mean_trustworthy")
-    plt.title("Trustworthiness Scores by Survey Type")
-    plt.ylabel("Mean Trustworthiness")
-    plt.xlabel("Survey Group")
-    plt.tight_layout()
-    plt.show()
-
-    # === T-Test example: 1a vs 1b ===
-    trust_1a = df_all[df_all["survey_group"] == "1a"]["mean_trustworthy"]
-    trust_1b = df_all[df_all["survey_group"] == "1b"]["mean_trustworthy"]
-    t_stat, p_val = ttest_ind(trust_1a, trust_1b, nan_policy='omit')
-    print(f"Trustworthiness t-test (1a vs 1b): t={t_stat:.3f}, p={p_val:.3f}")
-
-    # Repeat as needed for confidence or credibility
-
-    return df_all
-
-print(survey_type_influence(df_1a, df_2a, df_1b, df_2b))
 # %%
 
+df = belief_coefficients_df_2a
+import matplotlib.pyplot as plt
+import seaborn as sns
 
+# 1. Belief Coefficient vs. Trust in Traditional Media
+sns.scatterplot(data=df, x='trust_traditional', y='belief_coefficient')
+plt.title('Belief Coefficient vs. Trust in Traditional Media')
+plt.xlabel('Trust in Traditional Media')
+plt.ylabel('Belief Coefficient')
+plt.show()
+
+# 2. Belief Coefficient vs. Double-Checking ChatGPT
+sns.scatterplot(data=df, x='doublechecking_ChatGPT', y='belief_coefficient')
+plt.title('Belief Coefficient vs. Double-Checking ChatGPT')
+plt.xlabel('How Often They Double-Check ChatGPT')
+plt.ylabel('Belief Coefficient')
+plt.show()
+
+# 3. Combined Plot: Belief Coefficient vs. Trust in ChatGPT, Colored by Double-Checking
+sns.scatterplot(data=df, x='trust_ChatGPT', y='belief_coefficient', hue='doublechecking_ChatGPT')
+plt.title('Belief Coefficient vs. Trust in ChatGPT, Colored by Double-Checking')
+plt.xlabel('Trust in ChatGPT')
+plt.ylabel('Belief Coefficient')
+plt.legend(title='Double-Checking ChatGPT')
+plt.show()
+
+# 4. Box Plots of Belief Coefficient by Categorical Variables
+sns.boxplot(data=df, x='ChatGPT_usage_amount', y='belief_coefficient')
+plt.title('Belief Coefficient by ChatGPT Usage Amount')
+plt.xlabel('ChatGPT Usage Amount')
+plt.ylabel('Belief Coefficient')
+plt.show()
+
+sns.boxplot(data=df, x='doublechecking_ChatGPT', y='belief_coefficient')
+plt.title('Belief Coefficient by Double-Checking ChatGPT')
+plt.xlabel('How Often They Double-Check ChatGPT')
+plt.ylabel('Belief Coefficient')
+plt.show()
+
+# 5. Scatter Matrix (Pair Plot)
+sns.pairplot(df[['belief_coefficient', 'Familiar_with_AI', 'trust_ChatGPT', 'trust_traditional']])
+plt.suptitle('Pair Plot of Belief Coefficient and Trust Measures', y=1.02)
+plt.show()
+# %%
