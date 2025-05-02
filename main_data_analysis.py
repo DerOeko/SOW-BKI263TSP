@@ -46,6 +46,7 @@ import seaborn as sns
 import re
 
 
+from scipy.stats import ttest_ind
 
 # %% ==========================================================================
 # ========== read in raw surveys (must be in the same folder as this script) ==
@@ -971,11 +972,7 @@ def survey_type_influence(df1a, df2a, df1b, df2b):
     
 
 #ChatGPT test do not pay al lot of attention to this cell!!!
-import pandas as pd
-import numpy as np
-import matplotlib.pyplot as plt
-import seaborn as sns
-from scipy.stats import ttest_ind
+
 
 def survey_type_influence(df_1a, df_2a, df_1b, df_2b):
     # Get scores
