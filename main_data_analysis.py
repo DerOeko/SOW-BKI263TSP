@@ -558,7 +558,7 @@ def data_cleaner(
     result = result[result["do_you_agree_to_participate"] == "Yes"]
 
     # filter out participants who did not complete the survey
-    result = result.dropna(subset=['G02Q02_SQ001'])
+    result = result.dropna(subset=['Faculty_of_Philosophy'])
     # drop irrelevant columns
     result = result.drop(columns=["submitdate", "startlanguage", "seed"])
     
@@ -606,6 +606,7 @@ def create_ai_generated_column(df, survey_text_origins, survey_prefix="Sv1a"):
     Returns:
     - DataFrame with ai_generated columns added
     """
+
     # Create a copy of the DataFrame to ensure we're not working with a view
     result = df.copy()
     
@@ -853,43 +854,93 @@ import statsmodels.formula.api as smf
 
 #%%
 
-# melt trust, cred, conf, belief and ai flags into long form
-df_trust = df_2a.melt(
-    id_vars=['participant_id'],
-    value_vars=[f'Sv2a_T{i}_trustworthy'   for i in range(1,13)],
-    var_name='text', value_name='trustworthy'
-)
-df_cred  = df_2a.melt( id_vars=['participant_id'],
-                       value_vars=[f'Sv2a_T{i}_credible'     for i in range(1,13)],
-                       var_name='text', value_name='credible')
-df_conf  = df_2a.melt( id_vars=['participant_id'],
-                       value_vars=[f'Sv2a_T{i}_confident'    for i in range(1,13)],
-                       var_name='text', value_name='confident')
-df_bel   = df_2a.melt( id_vars=['participant_id'],
-                       value_vars=[f'Sv2a_T{i}_belief'       for i in range(1,13)],
-                       var_name='text', value_name='belief')
-df_ai    = df_2a.melt( id_vars=['participant_id'],
-                       value_vars=[f'Sv2a_T{i}_ai_generated' for i in range(1,13)],
-                       var_name='text', value_name='ai_generated')
+def multiple_regression_model_with_background(df, survey_prefix):
+    # melt trust, cred, conf, belief and ai flags into long form
+    df_trust = df.melt(
+        id_vars=['participant_id'],
+        value_vars=[f'{survey_prefix}_T{i}_trustworthy'   for i in range(1,13)],
+        var_name='text', value_name='trustworthy'
+    )
+    df_cred  = df.melt( id_vars=['participant_id'],
+                        value_vars=[f'{survey_prefix}_T{i}_credible'     for i in range(1,13)],
+                        var_name='text', value_name='credible')
+    df_conf  = df.melt( id_vars=['participant_id'],
+                        value_vars=[f'{survey_prefix}_T{i}_confident'    for i in range(1,13)],
+                        var_name='text', value_name='confident')
+    df_bel   = df.melt( id_vars=['participant_id'],
+                        value_vars=[f'{survey_prefix}_T{i}_belief'       for i in range(1,13)],
+                        var_name='text', value_name='belief')
+    df_ai    = df.melt( id_vars=['participant_id'],
+                        value_vars=[f'{survey_prefix}_T{i}_ai_generated' for i in range(1,13)],
+                        var_name='text', value_name='ai_generated')
 
-# strip the “Sv2a_” prefix so you can merge on just “text”
-for df_ in (df_trust, df_cred, df_conf, df_bel, df_ai):
-    df_['text'] = df_['text'].str.replace(r'^Sv2a_T(\d+)_.+$', r'T\1', regex=True)
+    # strip the “Sv2a_” prefix so you can merge on just “text”
+    for df_ in (df_trust, df_cred, df_conf, df_bel, df_ai):
+        df_['text'] = df_['text'].str.replace(r'^' + survey_prefix + r'_T(\d+)_.+$', r'T\1', regex=True)
+    # merge them all
+    df_long = (df_trust
+            .merge(df_cred,  on=['participant_id','text'])
+            .merge(df_conf,  on=['participant_id','text'])
+            .merge(df_bel,   on=['participant_id','text'])
+            .merge(df_ai,    on=['participant_id','text'])
+    )
 
-# merge them all
-df_long = (df_trust
-           .merge(df_cred,  on=['participant_id','text'])
-           .merge(df_conf,  on=['participant_id','text'])
-           .merge(df_bel,   on=['participant_id','text'])
-           .merge(df_ai,    on=['participant_id','text'])
-)
+    # Merge background questions
+    background_cols = ["trust_traditional", "trust_ChatGPT", "doublechecking_ChatGPT", "was_traditionaly_wrong", "was_ChatGPT_wrong", "Familiar_with_AI"]
+    df_long = df_long.merge(df[['participant_id'] + background_cols].drop_duplicates(subset=['participant_id']), on='participant_id', how='left')
 
-# now run one regression for every row
-formula = 'trustworthy ~ credible + confident + belief + ai_generated'
-model   = smf.ols(formula=formula, data=df_long).fit()
-print(model.summary())
+    # now run one regression for every row
+    formula = 'trustworthy ~ credible + confident + belief + ai_generated + trust_traditional + trust_ChatGPT + doublechecking_ChatGPT + was_traditionaly_wrong + was_ChatGPT_wrong + Familiar_with_AI'
+    model = smf.ols(formula=formula, data=df_long).fit()
+    return model
+
+
+
+# You can similarly run the model for the entire datasets with background:
+# model_df_1b_with_background = multiple_regression_model_with_background(df_1b, "Sv1b")
+# model_df_2b_with_background = multiple_regression_model_with_background(df_2b, "Sv2b")
+
+# print(model_df_2a.summary())
+# print(model_df_1a.summary())
+# print(modele_df_1b.summary())
+# print(model_df_2b.summary())
 # %%
-plt.df_2a(column='Sv2a_T1_trustworthy', bins=10)
+# plt.df_2a(column='Sv2a_T1_trustworthy', bins=10
+
+# %%=========================================================================
+# ==========Multiple regression model per participant to compare to background questions ===================================
+# =============================================================================
+
+
+def analyze_single_participant_with_background(df, participant_id, survey_prefix):
+    df_single_participant = df[df['participant_id'] == participant_id].copy()
+    model_single_participant = multiple_regression_model_with_background(df_single_participant, str(survey_prefix))
+    print(f"\nRegression results for participant {participant_id} ({survey_prefix}):")
+    print(model_single_participant.summary())
+    # Extract background questions
+    background =   df_single_participant[["trust_traditional","trust_ChatGPT", "doublechecking_ChatGPT", "was_traditionaly_wrong", "was_ChatGPT_wrong","Familiar_with_AI"]].iloc[0] # Take the first row as background is constant for a participant
+    print("\nBackground questions:")
+    print(background)
+
+# Assuming you have your DataFrames df_1a, df_1b, df_2a, df_2b loaded
+# Example usage for analyzing a single participant with the background in the regression:
+print("\nRunning multiple regression model with background (example for participant 3_1a)...")
+model_df_1a_with_background = multiple_regression_model_with_background(df_1a, "Sv1a")
+print(model_df_1a_with_background.summary())
+
+print("\nAnalyzing single participant with background...")
+print(analyze_single_participant_with_background(df_1a, "3_1a", "Sv1a"))
+# %%=========================================================================
+# ========== plotting background against performance ====================================
+# =============================================================================
+df_concatenated = pd.concat([df_1a, df_2a, df_1b, df_2b], ignore_index=True)
+
+plt.figure(figsize=(10, 6))
+plt.scatter(df_concatenated["trust_ChatGPT"], df_concatenated["aggregated_correct_belief"], alpha=0.5)
+#regression line
+sns.regplot(x="trust_ChatGPT", y="aggregated_correct_belief", data=df_concatenated, scatter=False, color='red')
+plt.show()
+
 # %%=========================================================================
 # ========== Finding the scores for trust,cred,conf ===================================
 # =============================================================================
