@@ -1033,7 +1033,15 @@ def analyze_single_participant_with_background(df, participant_id, survey_prefix
 # Example usage for analyzing a single participant with the background in the regression:
 print("\nRunning multiple regression model with background (example for participant 3_1a)...")
 model_df_1a_with_background = multiple_regression_model_with_background(df_1a, "Sv1a")
+model_df_2a_with_background = multiple_regression_model_with_background(df_2a, "Sv2a")
+model_df_1b_with_background = multiple_regression_model_with_background(df_1b, "Sv1b")
+model_df_2b_with_background = multiple_regression_model_with_background(df_2b, "Sv2b")
+
+
 print(model_df_1a_with_background.summary())
+print(model_df_2a_with_background.summary())
+print(model_df_1b_with_background.summary())
+print(model_df_2b_with_background.summary())
 
 print("\nAnalyzing single participant with background...")
 print(analyze_single_participant_with_background(df_1a, "3_1a", "Sv1a"))
