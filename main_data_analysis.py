@@ -17,6 +17,9 @@
 # 8) if no -> combine data into a single analysis : 
 
 
+
+# CHECK THIS AND THEN ANALYSIS https://docs.google.com/document/d/1oOQNnOSSosASuEkfXeORtZspPcvTdH6ULDFgknAPReo/edit?tab=t.0
+
 # Survey 2a: Background questions in the back !!!!!!!!!!!!!!!!!!!!!!!!!!!!! makes no sense to me but ok
 
 # https://tsp-c6.limesurvey.net/273257?lang=en
@@ -44,32 +47,33 @@ import scipy
 from scipy.stats import binomtest
 import seaborn as sns
 import re
+import scipy.stats as stats
+from scipy.stats import levene
 
 
-from scipy.stats import ttest_ind
 
 # %% ==========================================================================
 # ========== read in raw surveys (must be in the same folder as this script) ==
 # =============================================================================
 
 
-raw_Survey1a = pd.read_csv('file:///Users/ferdinandpaar/Downloads/Survey1a.csv')
-raw_Survey2a = pd.read_csv('file:///Users/ferdinandpaar/Downloads/Survey2a.csv')
+raw_Survey1a = pd.read_csv('Survey1a.csv')
+raw_Survey2a = pd.read_csv('Survey2a.csv')
 
 
-raw_Survey1b = pd.read_csv('file:///Users/ferdinandpaar/Downloads/Survey1b.csv')
-raw_Survey2b = pd.read_csv('file:///Users/ferdinandpaar/Downloads/Survey2b.csv')
+raw_Survey1b = pd.read_csv('Survey1b.csv')
+raw_Survey2b = pd.read_csv('Survey2b.csv')
 
 # %% ==========================================================================
 # ========== define mappings, data cleaner and processing function ============
 # =============================================================================
 
 
-# for survey 1 this should be a:
+# for survey 1 :
 
 # text 1, 2, 4, 7, 8, 9 are traditional 
 # text 3, 5, 6, 10, 11, 12 are ai
-# for survey 2 this should be b:
+# for survey 2 :
 # trad texts are 1,2,3,4,5,6
 # ai texts are 7,8,9,10,11,12
 # so surveyX_text_origins= ture means AI generated, false means traditional
@@ -559,7 +563,7 @@ def data_cleaner(
     result = result[result["do_you_agree_to_participate"] == "Yes"]
 
     # filter out participants who did not complete the survey
-    result = result.dropna(subset=['Faculty_of_Philosophy'])
+    result = result.dropna(subset=["Faculty_of_Philosophy"])
     # drop irrelevant columns
     result = result.drop(columns=["submitdate", "startlanguage", "seed"])
     
@@ -573,7 +577,7 @@ def data_cleaner(
     trust_cols = [f"{survey_prefix}_T{i}_trustworthy" for i in range(1, 13)]
     existing_trust_cols = [col for col in trust_cols if col in result.columns]
     result["trustworthy_nan_count"] = result[existing_trust_cols].isna().sum(axis=1)
-    result = result[result["trustworthy_nan_count"] <= 4]
+    result = result[result["trustworthy_nan_count"] <= 2]
     result.drop(columns=["trustworthy_nan_count"], inplace=True)
 
 
@@ -694,26 +698,297 @@ df_2b = data_cleaner(
     survey_text_origins=survey2_text_origins,
     survey_prefix="Sv2b"
 )
+# For Survey 1a:
+# Create a new column aggregating correct answers from all texts
+df_1a["aggregated_correct_belief"] = df_1a.filter(like="_correct_belief").sum(axis=1)
+df_1b["aggregated_correct_belief"] = df_1b.filter(like="_correct_belief").sum(axis=1)
+df_2a["aggregated_correct_belief"] = df_2a.filter(like="_correct_belief").sum(axis=1)
+df_2b["aggregated_correct_belief"] = df_2b.filter(like="_correct_belief").sum(axis=1)
 
+# Total correct responses across all participants:
+total_successes_1a = int(df_1a["aggregated_correct_belief"].sum())
+# Total trials is the number of participants multiplied by 12
+total_trials_1a = len(df_1a) * 12
+
+
+from scipy.stats import binomtest
+# Example hypothesis: testing if the correct response rate exceeds 50%
+binom_test_result_1a = binomtest(total_successes_1a, total_trials_1a, 0.5, alternative='greater')
+# print(f"Binomial test result for Survey 1a: {binom_test_result_1a}")
+
+# For Survey 2a (make sure to use df_2a, not df_2b):
+df_2a["aggregated_correct_belief"] = df_2a.filter(like="_correct_belief").sum(axis=1)
+total_successes_2a = int(df_2a["aggregated_correct_belief"].sum())
+total_trials_2a = len(df_2a) * 12
+
+
+
+binom_test_result_2a = binomtest(total_successes_2a, total_trials_2a, 0.5, alternative='greater')
+# print(f"Binomial test result for Survey 2a: {binom_test_result_2a}")
 
 # %%==========================================================================
 # ========== Printing the dataframes ===================================
 # =============================================================================
 
 
-# print("df_1a head:")
-# print(df_1a.to_string())
-# print("df_2a head:")
-# print(df_2a.to_string())
-# print("df_1b head:")
-# print(df_1b.to_string())
-# print("df_2b head:")
-# print(df_2b.to_string())
-# print(f"df_1a shape: {df_1a.shape}")
-# print(f"df_2a shape: {df_2a.shape}")
-# print(f"df_1b shape: {df_1b.shape}")
-# print(f"df_2b shape: {df_2b.shape}")
+print("df_1a head:")
+print(df_1a.to_string())
+print("df_2a head:")
+print(df_2a.to_string())
+print("df_1b head:")
+print(df_1b.to_string())
+print("df_2b head:")
+print(df_2b.to_string())
+print(f"df_1a shape: {df_1a.shape}")
+print(f"df_2a shape: {df_2a.shape}")
+print(f"df_1b shape: {df_1b.shape}")
+print(f"df_2b shape: {df_2b.shape}")
 
+
+
+# %% ==========================================================================
+# ==========Finding background means// sd's /frequency distributions ===================================
+# =============================================================================
+def background_insights(df):
+    df = df.copy()
+    background_cols = [ "Familiar_with_AI", "Tratditional_usage", "ChatGPT_usage_amount",
+    "trust_traditional", "trust_ChatGPT", "doublechecking_ChatGPT", "was_traditionaly_wrong",
+    "was_ChatGPT_wrong"]
+    df_bg = df[background_cols]
+
+    categorical_vars = [ "was_traditionaly_wrong", "was_ChatGPT_wrong", "doublechecking_ChatGPT", "ChatGPT_usage_amount"]
+
+    numeric_vars = list(set(df_bg.columns) - set(categorical_vars))
+    desc_numeric = df_bg[numeric_vars].describe().T[['mean', 'std']]
+    freq_categorical = {}
+    for col in categorical_vars:
+        freq_categorical[col] = df_bg[col].value_counts(dropna=False)
+
+    # Display results
+    print("=== Numeric Variable Summary ===")
+    print(desc_numeric)
+
+    print("\n=== Frequency Distributions (Categorical Variables) ===")
+    for col, dist in freq_categorical.items():
+        print(f"\n{col}:")
+        print(dist)
+    return
+
+concatenated_df_front= pd.concat([df_1a, df_2b], ignore_index=True)
+
+concatenated_df_back = pd.concat([df_1b, df_2a], ignore_index=True)
+
+print('========BACK=======')
+background_insights(concatenated_df_back)
+
+print('========FRONT=======')
+background_insights(concatenated_df_front)
+
+# %% ==========================================================================
+# ==========Finding means//SD'S for different text origins===================================
+# =============================================================================
+
+def survey_split_text_origin(df, prefix):
+    """
+    Splits survey 2 DataFrame into two:
+    - One containing only traditional texts (T1–T6)
+    - One containing only AI-generated texts (T7–T12)
+    """
+    if prefix in ['Sv2a', 'Sv2b']:
+        trad_texts = [f"T{i}" for i in range(1, 7)]
+        ai_texts = [f"T{i}" for i in range(7, 13)]
+    else:
+        trad_texts = [f"T{i}" for i in [1,2,4,7,8,9]]
+        ai_texts = [f"T{i}" for i in [3,5,6,10,11,12]]
+    # Build lists of full column names for each set
+    trad_cols = [col for col in df.columns if any(f"{prefix}_{t}_" in col for t in trad_texts)]
+    ai_cols = [col for col in df.columns if any(f"{prefix}_{t}_" in col for t in ai_texts)]
+
+    # Also include participant identifiers or general info if needed
+    id_cols = [col for col in df.columns if "participant_id" in col or "Familiar_with_AI" in col]
+
+    df_trad = df[id_cols + trad_cols]
+    df_ai = df[id_cols + ai_cols]
+
+    return df_trad, df_ai
+
+def survey_insights(df):
+    #score_cols = [col for col in df.columns if any(keyword in col for keyword in score_keywords)]
+
+    numeric_cols = df.select_dtypes(include='number').drop(columns=[col for col in df.columns if col.endswith('_std')])
+
+    # Compute overall mean and std, excluding NaNs
+    overall_mean = numeric_cols.mean()
+    overall_std = numeric_cols.std(ddof=1)
+
+    # Combine into a single summary DataFrame
+    summary_df = pd.DataFrame({
+        'mean': overall_mean,
+        'std': overall_std
+    })
+    return summary_df
+
+def find_scores(df, survey_prefix, origin):
+    """
+    Function that finds trust, credibility, confidence and respective means for dataframe
+    Parameters:
+      df: DataFrame containing the survey data
+      
+    Returns:
+      participant_scores: dictionary (currently) with the scores and their means
+    """
+    df_copy = df.copy()
+    rows =[]
+    if survey_prefix in ['Sv2a', 'Sv2b']:
+        if origin == 'trad':
+            text_nums = [1,2,3,4,5,6]
+        else:
+            text_nums = [7,8,9,10,11,12]
+    else:
+        if origin == 'trad':
+            text_nums = [1,2,4,7,8,9]
+        else:
+            text_nums = [3,5,6,10,11,12]
+    for participant_idx in range(df_copy.shape[0]): #for each participant
+        trustworthy = []
+        confident = []
+        credible = []
+        for text_num in text_nums: #for each text
+            trustworthy_col = f"{survey_prefix}_T{text_num}_trustworthy"
+            confident_col = f"{survey_prefix}_T{text_num}_confident"
+            credible_col = f"{survey_prefix}_T{text_num}_credible"
+            if trustworthy_col in df_copy.columns and confident_col in df_copy.columns and credible_col in df_copy.columns:
+                trustworthy_int = df_copy.iloc[participant_idx][trustworthy_col]
+                confident_int = df_copy.iloc[participant_idx][confident_col]
+                credible_int = df_copy.iloc[participant_idx][credible_col]
+                trustworthy.append(trustworthy_int)
+                confident.append(confident_int)
+                credible.append(credible_int)
+        mean_trustworthy = np.mean(trustworthy) if trustworthy else np.nan
+        std_trustworthy = np.std(trustworthy, ddof=1) if len(trustworthy) > 1 else np.nan
+        
+        mean_confident = np.mean(confident) if confident else np.nan
+        std_confident = np.std(confident, ddof=1) if len(confident) > 1 else np.nan
+        
+        mean_credible = np.mean(credible) if credible else np.nan
+        std_credible = np.std(credible, ddof=1) if len(credible) > 1 else np.nan
+        
+        participant_id = df_copy.iloc[participant_idx]["participant_id"]
+        
+        rows.append({
+            "participant_id": participant_id,
+            "trustworthy_mean": mean_trustworthy,
+            "trustworthy_std": std_trustworthy,
+            "confident_mean": mean_confident,
+            "confident_std": std_confident,
+            "credible_mean": mean_credible,
+            "credible_std": std_credible
+        })
+    df_scores = pd.DataFrame(rows)
+    return df_scores
+
+df1a_trad, df1a_ai = survey_split_text_origin(df_1a, 'Sv1a')
+df1b_trad, df1b_ai = survey_split_text_origin(df_1b, 'Sv1b')
+df1a_trad_scores = find_scores(df1a_trad, 'Sv1a', 'trad')
+df1a_ai_scores = find_scores(df1a_ai, 'Sv1a', 'ai')
+
+df1b_trad_scores = find_scores(df1b_trad, 'Sv1b', 'trad')
+df1b_ai_scores = find_scores(df1b_ai, 'Sv1b', 'ai')
+    
+df2a_trad, df2a_ai = survey_split_text_origin(df_2a, 'Sv2a')
+df2b_trad, df2b_ai = survey_split_text_origin(df_2b, 'Sv2b')
+
+df2a_trad_scores = find_scores(df2a_trad, 'Sv2a', 'trad')
+df2a_ai_scores = find_scores(df2a_ai, 'Sv2a', 'ai')
+
+df2b_trad_scores = find_scores(df2b_trad, 'Sv2b', 'trad')
+df2b_ai_scores = find_scores(df2b_ai, 'Sv2b', 'ai')
+
+concatenated_ai_df= pd.concat([df1a_ai_scores, df1b_ai_scores, df2a_ai_scores, df2b_ai_scores], ignore_index=True)
+
+concatenated_trad_df= pd.concat([df1a_trad_scores, df1b_trad_scores, df2a_trad_scores, df2b_trad_scores], ignore_index=True)
+
+stats_ai = survey_insights(concatenated_ai_df)
+stats_trad = survey_insights(concatenated_trad_df)
+
+print("=== Numeric Variable Text Origin AI Summary ===")
+print(stats_ai)
+
+print("=== Numeric Variable Text Origin TRADITIONAL Summary ===")
+print(stats_trad)
+# %% ==========================================================================
+# ==========Checking whether background q's influence the answers===================================
+# =============================================================================
+df1a_ai_scores['question_order'] = 'front'
+df2b_ai_scores['question_order'] = 'front'
+df1b_ai_scores['question_order'] = 'back'
+df2a_ai_scores['question_order'] = 'back'
+
+all_scores = pd.concat([df1a_ai_scores, df1b_ai_scores, df2a_ai_scores, df2b_ai_scores], ignore_index=True)
+
+for metric in ['trustworthy_mean', 'credible_mean', 'confident_mean']:
+    sns.boxplot(data=all_scores, x='question_order', y=metric)
+    plt.title(f"{metric.replace('_mean', '').capitalize()} by Question Order")
+    plt.show()
+
+#No social desireability, as the plots are roughly the same
+# %% ==========================================================================
+# ========== Checking normality and homogeneity of variance ===================================
+# =============================================================================
+
+df_combined = pd.merge(concatenated_ai_df, concatenated_trad_df, on='participant_id', suffixes=('_ai', '_trad'))
+for metric in ['trustworthy_mean', 'credible_mean', 'confident_mean']:
+    diff = df_combined[f"{metric}_ai"] - df_combined[f"{metric}_trad"]
+    plt.figure(figsize=(6, 4))
+    stats.probplot(diff.dropna(), dist="norm", plot=plt)
+    plt.title(f"Q-Q Plot of Differences in {metric.replace('_mean', '').capitalize()} (AI - Trad)")
+    plt.xlabel("Theoretical Quantiles (Normal Distribution)")
+    plt.ylabel("Observed Quantiles (Sample Data)")
+    plt.grid(True, linestyle="--", alpha=0.5)
+    plt.tight_layout()
+    plt.show()
+
+levene_stat, p_value = levene(concatenated_ai_df['trustworthy_mean'].dropna(), concatenated_trad_df['trustworthy_mean'].dropna())
+print(f"Levene test statistic: {levene_stat}, p-value: {p_value}")
+
+#normality and homogeneity of variance good for paired ttest
+
+# %% ==========================================================================
+# ==========Paired T test ===================================
+# =============================================================================
+
+for metric in ['trustworthy_mean', 'credible_mean', 'confident_mean']:
+    ai_scores = concatenated_ai_df[metric]
+    trad_scores = concatenated_trad_df[metric]
+    
+    paired_data = pd.concat([ai_scores, trad_scores], axis=1).dropna()
+    paired_data.columns = ['AI', 'Trad']  # rename for clarity
+    
+    t_stat, p_val = stats.ttest_rel(paired_data['AI'], paired_data['Trad'])
+    print(f"Paired t-test for {metric}: t={t_stat:.4f}, p={p_val:.4f}")
+
+#No significant score differences, all p values > 0.05
+
+#So this means that participants’ trust and perceived credibility do not differ strongly 
+#between the two content sources, but their confidence might be somewhat affected
+
+# %% ==========================================================================
+# ========== Cohen's D ===================================
+# =============================================================================
+def cohen_d_paired(diff_series):
+    diff = diff_series.dropna()
+    mean_diff = diff.mean()
+    std_diff = diff.std(ddof=1)
+    return mean_diff / std_diff if std_diff != 0 else float('nan')
+
+diffs = concatenated_ai_df[['trustworthy_mean', 'credible_mean', 'confident_mean']] - \
+        concatenated_trad_df[['trustworthy_mean', 'credible_mean', 'confident_mean']]
+
+for metric in ['trustworthy_mean', 'credible_mean', 'confident_mean']:
+    d = cohen_d_paired(diffs[metric])
+    print(f"Cohen's d for {metric.replace('_mean','')}: {d:.3f}")
+
+#Not a really significant cohen's D score as everything is belove <0.5
 # %% ==========================================================================
 # ========== Correlating trust with essay confidence usage column ===================================
 # =============================================================================
@@ -819,6 +1094,153 @@ def combinded_text_perfomace_by_a_b(df_1a, df_2a):
     return df_text_performance
 print(combinded_text_perfomace_by_a_b(df_1a, df_2a))
 print(combinded_text_perfomace_by_a_b(df_1b, df_2b))
+
+# %% ==========================================================================
+#==== Multiple regression model ========================================
+# =============================================================================
+
+import statsmodels.api as sm
+import statsmodels.formula.api as smf
+
+
+
+
+#%%=========================================================================
+# ========== Multiple regression df_2a===================================
+# =============================================================================
+
+# melt trust, cred, conf, belief and ai flags into long form
+df_trust = df_2a.melt(
+    id_vars=['participant_id'],
+    value_vars=[f'Sv2a_T{i}_trustworthy'   for i in range(1,13)],
+    var_name='text', value_name='trustworthy'
+)
+df_cred  = df_2a.melt( id_vars=['participant_id'],
+                       value_vars=[f'Sv2a_T{i}_credible'     for i in range(1,13)],
+                       var_name='text', value_name='credible')
+df_conf  = df_2a.melt( id_vars=['participant_id'],
+                       value_vars=[f'Sv2a_T{i}_confident'    for i in range(1,13)],
+                       var_name='text', value_name='confident')
+df_bel   = df_2a.melt( id_vars=['participant_id'],
+                       value_vars=[f'Sv2a_T{i}_belief'       for i in range(1,13)],
+                       var_name='text', value_name='belief')
+df_ai    = df_2a.melt( id_vars=['participant_id'],
+                       value_vars=[f'Sv2a_T{i}_ai_generated' for i in range(1,13)],
+                       var_name='text', value_name='ai_generated')
+
+# strip the “Sv2a_” prefix so you can merge on just “text”
+for df_ in (df_trust, df_cred, df_conf, df_bel, df_ai):
+    df_['text'] = df_['text'].str.replace(r'^Sv2a_T(\d+)_.+$', r'T\1', regex=True)
+
+# merge them all
+df_long = (df_trust
+           .merge(df_cred,  on=['participant_id','text'])
+           .merge(df_conf,  on=['participant_id','text'])
+           .merge(df_bel,   on=['participant_id','text'])
+           .merge(df_ai,    on=['participant_id','text'])
+)
+
+for pid, df_sub in df_long.groupby('participant_id'):
+    model = smf.ols("trustworthy ~ credible + confident + ai_generated + belief", data=df_sub).fit()
+    print(f"Participant {pid}")
+    print(model.summary())
+#%% ===================
+
+#for participant_idx in range(df_2a.shape[0]):
+#%%=========================================================================
+# ========== Multiple regression df_1a===================================
+# =============================================================================
+
+# melt trust, cred, conf, belief and ai flags into long form
+df_trust = df_1a.melt(
+    id_vars=['participant_id'],
+    value_vars=[f'Sv1a_T{i}_trustworthy'   for i in range(1,13)],
+    var_name='text', value_name='trustworthy'
+)
+df_cred  = df_1a.melt( id_vars=['participant_id'],
+                       value_vars=[f'Sv1a_T{i}_credible'     for i in range(1,13)],
+                       var_name='text', value_name='credible')
+df_conf  = df_1a.melt( id_vars=['participant_id'],
+                       value_vars=[f'Sv1a_T{i}_confident'    for i in range(1,13)],
+                       var_name='text', value_name='confident')
+df_bel   = df_1a.melt( id_vars=['participant_id'],
+                       value_vars=[f'Sv1a_T{i}_belief'       for i in range(1,13)],
+                       var_name='text', value_name='belief')
+df_ai    = df_1a.melt( id_vars=['participant_id'],
+                       value_vars=[f'Sv1a_T{i}_ai_generated' for i in range(1,13)],
+                       var_name='text', value_name='ai_generated')
+
+# strip the “Sv2a_” prefix so you can merge on just “text”
+for df_ in (df_trust, df_cred, df_conf, df_bel, df_ai):
+    df_['text'] = df_['text'].str.replace(r'^Sv1a_T(\d+)_.+$', r'T\1', regex=True)
+
+# merge them all
+df_long = (df_trust
+           .merge(df_cred,  on=['participant_id','text'])
+           .merge(df_conf,  on=['participant_id','text'])
+           .merge(df_bel,   on=['participant_id','text'])
+           .merge(df_ai,    on=['participant_id','text'])
+)
+
+# now run one regression for every row
+formula = 'trustworthy ~ credible + confident + belief + ai_generated'
+model   = smf.ols(formula=formula, data=df_long).fit()
+print(model.summary())
+
+
+
+# %%
+plt.df_2a(column='Sv2a_T1_trustworthy', bins=10)
+# %%=========================================================================
+# ========== Finding the scores for trust,cred,conf ===================================
+# =============================================================================
+def find_scores(df, survey_prefix):
+    """
+    Function that finds trust, credibility, confidence and respective means for dataframe
+    Parameters:
+      df: DataFrame containing the survey data
+      
+    Returns:
+      participant_scores: dictionary (currently) with the scores and their means
+    """
+    df_copy = df.copy()
+    participant_scores = {}
+
+    for participant_idx in range(df_copy.shape[0]): #for each participant
+        trustworthy = []
+        confident = []
+        credible = []
+        for text_num in range(1, 13): #for each text
+            trustworthy_col = f"{survey_prefix}_T{text_num}_trustworthy"
+            confident_col = f"{survey_prefix}_T{text_num}_confident"
+            credible_col = f"{survey_prefix}_T{text_num}_credible"
+            if trustworthy_col in df_copy.columns and confident_col in df_copy.columns and credible_col in df_copy.columns:
+                trustworthy_int = df_copy.iloc[participant_idx][trustworthy_col]
+                confident_int = df_copy.iloc[participant_idx][confident_col]
+                credible_int = df_copy.iloc[participant_idx][credible_col]
+                trustworthy.append(trustworthy_int)
+                confident.append(confident_int)
+                credible.append(credible_int)
+        mean_trustworthy = np.mean(trustworthy)
+        mean_confident = np.mean(confident)
+        mean_credible = np.mean(credible)
+        participant_id = df_copy.iloc[participant_idx]["participant_id"]
+        participant_scores[participant_id] = {
+        "trustworthy": {
+            "values": trustworthy,
+            "mean": mean_trustworthy
+        },
+        "confident": {
+            "values": confident,
+            "mean": mean_confident
+        },
+        "credible": {
+            "values": credible,
+            "mean": mean_credible
+        }
+    }
+    return participant_scores
+# %%
 
 # %% ==========================================================================
 #==== Multiple regression model ========================================
@@ -930,10 +1352,10 @@ def compare_belief_coefficients_2_background(belief_coefficients_df, df_backgrou
 # print(belief_coefficients_df_2a.to_string())s
 
 
-belief_coefficients_df_1a = compare_belief_coefficients_2_background(belief_coefficients_df_1a, df_1a)
-belief_coefficients_df_2a = compare_belief_coefficients_2_background(belief_coefficients_df_2a, df_2a)
-belief_coefficients_df_1b = compare_belief_coefficients_2_background(belief_coefficients_df_1b, df_1b)
-belief_coefficients_df_2b = compare_belief_coefficients_2_background(belief_coefficients_df_2b, df_2b)
+compared_belief_coefficients_df_1a = compare_belief_coefficients_2_background(belief_coefficients_df_1a, df_1a)
+compared_belief_coefficients_df_2a = compare_belief_coefficients_2_background(belief_coefficients_df_2a, df_2a)
+compared_belief_coefficients_df_1b = compare_belief_coefficients_2_background(belief_coefficients_df_1b, df_1b)
+compared_belief_coefficients_df_2b = compare_belief_coefficients_2_background(belief_coefficients_df_2b, df_2b)
 
 
 print(belief_coefficients_df_2a.to_string())
@@ -949,8 +1371,9 @@ print(belief_coefficients_df_2a.to_string())
 import matplotlib.pyplot as plt
 import seaborn as sns
 def plot_belief_coefficients(df):
+    print("INHERE")
     # 1. Belief Coefficient vs. Trust in Traditional Media
-    sns.scatterplot(data=df, x='trust_traditional', y='belief_coefficient')
+    sns.boxplot(data=df, x='trust_traditional', y='belief_coefficient')
     plt.title('Belief Coefficient vs. Trust in Traditional Media')
     plt.xlabel('Trust in Traditional Media')
     plt.ylabel('Belief Coefficient')
@@ -985,14 +1408,34 @@ def plot_belief_coefficients(df):
     plt.show()
 
     # 5. Scatter Matrix (Pair Plot)
-    sns.pairplot(df[['belief_coefficient', 'Familiar_with_AI', 'trust_ChatGPT', 'trust_traditional']])
-    plt.suptitle('Pair Plot of Belief Coefficient and Trust Measures', y=1.02)
-    plt.show()
+    #sns.pairplot(df[['belief_coefficient', 'Familiar_with_AI', 'trust_ChatGPT', 'trust_traditional']])
+    #plt.suptitle('Pair Plot of Belief Coefficient and Trust Measures', y=1.02)
+    #plt.show()
 
-plot_belief_coefficients(belief_coefficients_df_1a)
-plot_belief_coefficients(belief_coefficients_df_2a)
+# Survey 2a: Background questions in the back !!!!!!!!!!!!!!!!!!!!!!!!!!!!! makes no sense to me but ok
 
-plot_belief_coefficients(belief_coefficients_df_1b)
-plot_belief_coefficients(belief_coefficients_df_2b)
+# https://tsp-c6.limesurvey.net/273257?lang=en
 
-# %%
+# Survey 1a: Backgorund questions in the front !!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+# https://tsp-c6.limesurvey.net/474256?lang=en
+
+# Survey 2b: Backgorund questions in the front !!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+# https://levi11.limesurvey.net/353824?lang=en
+
+# Survey 1b: Backgorund questions in the back !!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+# https://levi11.limesurvey.net/445568?lang=en
+
+
+plot_belief_coefficients(compared_belief_coefficients_df_1a)
+plot_belief_coefficients(compared_belief_coefficients_df_2a)
+
+plot_belief_coefficients(compared_belief_coefficients_df_1b)
+plot_belief_coefficients(compared_belief_coefficients_df_2b)
+
+
+
+
+    
