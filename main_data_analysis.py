@@ -1045,7 +1045,7 @@ df_concatenated = pd.concat([df_1a, df_2a, df_1b, df_2b], ignore_index=True)
 plt.figure(figsize=(10, 6))
 plt.scatter(df_concatenated["Familiar_with_AI"], df_concatenated["aggregated_correct_belief"], alpha=0.5)
 #regression line
-sns.regplot(x="Familiar_with_AI", y="aggregated_correct_belief", data=df_concatenated, scatter=False, color='red')
+# sns.regplot(x="Familiar_with_AI", y="aggregated_correct_belief", data=df_concatenated, scatter=False, color='red')
 plt.show()
 
 
