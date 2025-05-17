@@ -51,10 +51,8 @@ import statsmodels.formula.api as smf
 # ========== read in raw surveys (must be in the same folder as this script) ==
 # =============================================================================
 
-
 raw_Survey1a = pd.read_csv('Survey1a.csv')
 raw_Survey2a = pd.read_csv('Survey2a.csv')
-
 
 raw_Survey1b = pd.read_csv('Survey1b.csv')
 raw_Survey2b = pd.read_csv('Survey2b.csv')
@@ -521,7 +519,6 @@ def data_cleaner(
     df,
     column_mapping,
     survey_number,
-    background_first,
     survey_text_origins=None,
     survey_prefix=None
 ):
@@ -532,7 +529,6 @@ def data_cleaner(
     - df: DataFrame containing the survey data
     - column_mapping: dict mapping original column names to desired names
     - survey_number: int indicating the survey number
-    - background_first: bool indicating whether background questions were first
     - survey_text_origins: optional dict mapping text numbers to bool (AI vs traditional)
     - survey_prefix: optional string prefix for survey columns (eg "Sv2b")
     
@@ -555,7 +551,6 @@ def data_cleaner(
     # build participant_id with suffix
     result["participant_id"] = result["participant_id"].astype(str) + f"_{survey_number}"
     print(survey_number)
-    # result["Background_in_front"] = background_first # check this 
     
     # drop participants with majority missing trust scores//so the participans that filled out NaN
     trust_cols = [f"{survey_prefix}_T{i}_trustworthy" for i in range(1, 13)]
@@ -641,7 +636,12 @@ def correct_belief(df, survey_prefix="Sv1a"):
                 ((ai_generated_str == "true") & (belief_str == "yes")) |
                 ((ai_generated_str == "false") & (belief_str == "no"))
             )
-            # print(f"Correct belief for {survey_prefix}_T{i}: {result[f'{survey_prefix}_T{i}_correct_belief'].values}")
+    correct_belief_cols = [f"{survey_prefix}_T{i}_correct_belief" for i in range(1, 13)]
+
+    #count number of True values across the row, skipping NaNs
+    result[f"{survey_prefix}_aggregated_correct_belief"] = result[correct_belief_cols].sum(axis=1, skipna=True)
+
+    #print(result[[f"{survey_prefix}_correct_count"]])
     return result
 
 
@@ -651,7 +651,6 @@ df_1a = data_cleaner(
     raw_Survey1a,
     survey1a_col_mapping,
     survey_number="1a",
-    background_first=True,
     survey_text_origins=survey1_text_origins,
     survey_prefix="Sv1a"
 )
@@ -660,7 +659,6 @@ df_2a = data_cleaner(
     raw_Survey2a,
     survey2a_col_mapping,
     survey_number="2a",
-    background_first=False,
     survey_text_origins=survey2_text_origins,
     survey_prefix="Sv2a"
 )
@@ -669,7 +667,6 @@ df_1b = data_cleaner(
     raw_Survey1b,
     survey1b_col_mapping,
     survey_number="1b",
-    background_first=False,
     survey_text_origins=survey1_text_origins,
     survey_prefix="Sv1b"
 )
@@ -678,37 +675,9 @@ df_2b = data_cleaner(
     raw_Survey2b,
     survey2b_col_mapping,
     survey_number="2b",
-    background_first=True,
     survey_text_origins=survey2_text_origins,
     survey_prefix="Sv2b"
 )
-# For Survey 1a:
-# Create a new column aggregating correct answers from all texts
-df_1a["aggregated_correct_belief"] = df_1a.filter(like="_correct_belief").sum(axis=1)
-df_1b["aggregated_correct_belief"] = df_1b.filter(like="_correct_belief").sum(axis=1)
-df_2a["aggregated_correct_belief"] = df_2a.filter(like="_correct_belief").sum(axis=1)
-df_2b["aggregated_correct_belief"] = df_2b.filter(like="_correct_belief").sum(axis=1)
-
-# Total correct responses across all participants:
-total_successes_1a = int(df_1a["aggregated_correct_belief"].sum())
-# Total trials is the number of participants multiplied by 12
-total_trials_1a = len(df_1a) * 12
-
-
-# from scipy.stats import binomtest
-# Example hypothesis: testing if the correct response rate exceeds 50%
-# binom_test_result_1a = binomtest(total_successes_1a, total_trials_1a, 0.5, alternative='greater')
-# print(f"Binomial test result for Survey 1a: {binom_test_result_1a}")
-
-# For Survey 2a (make sure to use df_2a, not df_2b):
-df_2a["aggregated_correct_belief"] = df_2a.filter(like="_correct_belief").sum(axis=1)
-total_successes_2a = int(df_2a["aggregated_correct_belief"].sum())
-total_trials_2a = len(df_2a) * 12
-
-
-
-# binom_test_result_2a = binomtest(total_successes_2a, total_trials_2a, 0.5, alternative='greater')
-# print(f"Binomial test result for Survey 2a: {binom_test_result_2a}")
 
 # %%==========================================================================
 # ========== Printing the dataframes ===================================
@@ -728,6 +697,36 @@ print(f"df_2a shape: {df_2a.shape}")
 print(f"df_1b shape: {df_1b.shape}")
 print(f"df_2b shape: {df_2b.shape}")
 
+
+# %%==========================================================================
+# ========== Checking if the correct text belief rate exceeds 50% ===================================
+# =============================================================================
+
+# survey 1a
+total_successes_1a = int(df_1a["Sv1a_aggregated_correct_belief"].sum())
+total_trials_1a = len(df_1a) * 12
+binom_test_result_1a = binomtest(total_successes_1a, total_trials_1a, p=0.5, alternative='greater')
+print(f"Binomial test result for Survey 1a: {binom_test_result_1a}")
+
+# survey 1b
+total_successes_1b = int(df_1b["Sv1b_aggregated_correct_belief"].sum())
+total_trials_1b = len(df_1b) * 12
+
+binom_test_result_1b = binomtest(total_successes_1b, total_trials_1b, p=0.5, alternative='greater')
+print(f"Binomial test result for Survey 1b: {binom_test_result_1b}")
+
+# for survey 2a
+total_successes_2a = int(df_2a["Sv2a_aggregated_correct_belief"].sum())
+total_trials_2a = len(df_2a) * 12
+binom_test_result_2a = binomtest(total_successes_2a, total_trials_2a, p=0.5, alternative='greater')
+print(f"Binomial test result for Survey 2a: {binom_test_result_2a}")
+
+# for survey 2b
+total_successes_2b = int(df_2b["Sv2b_aggregated_correct_belief"].sum())
+total_trials_2b = len(df_2b) * 12
+
+binom_test_result_2b = binomtest(total_successes_2b, total_trials_2b, p=0.5, alternative='greater')
+print(f"Binomial test result for Survey 2a: {binom_test_result_2b}")
 
 
 # %% ==========================================================================
@@ -1046,17 +1045,28 @@ print(model_df_2b_with_background.summary())
 print("\nAnalyzing single participant with background...")
 print(analyze_single_participant_with_background(df_1a, "3_1a", "Sv1a"))
 # %%=========================================================================
-# ========== plotting background against performance ====================================
+# ========== Plotting background against performance of correct belief ====================================
 # =============================================================================
 df_concatenated = pd.concat([df_1a, df_2a, df_1b, df_2b], ignore_index=True)
 
-plt.figure(figsize=(10, 6))
-plt.scatter(df_concatenated["Familiar_with_AI"], df_concatenated["aggregated_correct_belief"], alpha=0.5)
-#regression line
-df_concatenated["aggregated_correct_belief"] = pd.to_numeric(df_concatenated["aggregated_correct_belief"], errors='coerce')
+# unifying correct count column
+df_concatenated["correct_count"] = df_concatenated[
+    [col for col in df_concatenated.columns if col.endswith("_aggregated_correct_belief")]
+].bfill(axis=1).iloc[:, 0]
 
-sns.regplot(x="Familiar_with_AI", y="aggregated_correct_belief", data=df_concatenated, scatter=False, color='red')
+df_concatenated["familiarity"] = df_concatenated[
+    [col for col in df_concatenated.columns if "Familiar_with_AI" in col]
+].bfill(axis=1).iloc[:, 0]
+
+plt.figure(figsize=(10, 6))
+plt.scatter(df_concatenated["familiarity"], df_concatenated["correct_count"], alpha=0.5)
+sns.regplot(x="familiarity", y="correct_count", data=df_concatenated, scatter=False, color='red')
+plt.xlabel("Familiarity with AI")
+plt.ylabel("Correct Belief Count")
+plt.title("Familiarity with AI vs. Correct Belief Count")
 plt.show()
+
+
 
 
 # %% ==========================================================================
