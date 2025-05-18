@@ -678,6 +678,13 @@ df_2b = data_cleaner(
     survey_text_origins=survey2_text_origins,
     survey_prefix="Sv2b"
 )
+df_1a['survey_type'] = '1a'
+df_1b['survey_type'] = '1b'
+df_2a['survey_type'] = '2a'
+df_2b['survey_type'] = '2b'
+
+# Combine for modeling
+df_combined_long = pd.concat([df_1a, df_1b, df_2a, df_2b], ignore_index=True)
 
 # %%==========================================================================
 # ========== Printing the dataframes ===================================
@@ -934,6 +941,18 @@ print(f"Levene test statistic: {levene_stat}, p-value: {p_value}")
 # %% ==========================================================================
 # ==========Paired T test ===================================
 # =============================================================================
+df_concatenated = pd.concat([df_1a, df_2a, df_1b, df_2b], ignore_index=True)
+
+# unifying correct count column
+df_concatenated["correct_count"] = df_concatenated[
+    [col for col in df_concatenated.columns if col.endswith("_aggregated_correct_belief")]
+].bfill(axis=1).iloc[:, 0]
+# Label participants who correctly identified 75% or more of the texts
+df_concatenated["good_differentiator"] = df_concatenated["correct_count"] >= 9
+
+df_concatenated["familiarity"] = df_concatenated[
+    [col for col in df_concatenated.columns if "Familiar_with_AI" in col]
+].bfill(axis=1).iloc[:, 0]
 
 for metric in ['trustworthy_mean', 'credible_mean', 'confident_mean']:
     ai_scores = concatenated_ai_df[metric]
@@ -945,11 +964,74 @@ for metric in ['trustworthy_mean', 'credible_mean', 'confident_mean']:
     t_stat, p_val = stats.ttest_rel(paired_data['AI'], paired_data['Trad'])
     print(f"Paired t-test for {metric}: t={t_stat:.4f}, p={p_val:.4f}")
 
+# === Paired t-test for good differentiators only ===
+good_ids = df_concatenated[df_concatenated['good_differentiator']]['participant_id']
+
+ai_good = concatenated_ai_df[concatenated_ai_df['participant_id'].isin(good_ids)]
+trad_good = concatenated_trad_df[concatenated_trad_df['participant_id'].isin(good_ids)]
+
+for metric in ['trustworthy_mean', 'credible_mean', 'confident_mean']:
+    paired = pd.merge(ai_good[['participant_id', metric]], trad_good[['participant_id', metric]],
+                      on='participant_id', suffixes=('_ai', '_trad'))
+    tstat, pval = stats.ttest_rel(paired[f'{metric}_ai'], paired[f'{metric}_trad'])
+    print(f"[Good Differentiators] Paired t-test for {metric}: t={tstat:.4f}, p={pval:.4f}")
 #No significant score differences, all p values > 0.05
 
 #So this means that participants’ trust and perceived credibility do not differ strongly 
 #between the two content sources, but their confidence might be somewhat affected
 
+def create_long_df_for_belief_trust_plot(df, prefix):
+    melted_trust = df.melt(
+        id_vars=['participant_id'],
+        value_vars=[f'{prefix}_T{i}_trustworthy' for i in range(1,13)],
+        var_name='text', value_name='trustworthy'
+    )
+    melted_belief = df.melt(
+        id_vars=['participant_id'],
+        value_vars=[f'{prefix}_T{i}_belief' for i in range(1,13)],
+        var_name='text', value_name='belief'
+    )
+    melted_ai = df.melt(
+        id_vars=['participant_id'],
+        value_vars=[f'{prefix}_T{i}_ai_generated' for i in range(1,13)],
+        var_name='text', value_name='actual_ai'
+    )
+
+    # Clean text labels
+    for melted in [melted_trust, melted_belief, melted_ai]:
+        melted['text'] = melted['text'].str.extract(r'T(\d+)', expand=False)
+
+    df_long = melted_trust.merge(melted_belief, on=['participant_id', 'text']) \
+                          .merge(melted_ai, on=['participant_id', 'text'])
+    df_long['belief'] = df_long['belief'].str.strip().str.lower()
+    return df_long
+
+# Create combined belief-trust dataset
+df_long_1a = create_long_df_for_belief_trust_plot(df_1a, "Sv1a")
+df_long_1b = create_long_df_for_belief_trust_plot(df_1b, "Sv1b")
+df_long_2a = create_long_df_for_belief_trust_plot(df_2a, "Sv2a")
+df_long_2b = create_long_df_for_belief_trust_plot(df_2b, "Sv2b")
+
+df_belief_trust = pd.concat([df_long_1a, df_long_1b, df_long_2a, df_long_2b], ignore_index=True)
+
+# Normalize belief values for consistent grouping
+df_belief_trust['belief_normalized'] = df_belief_trust['belief'].map({
+    'yes': 'Believed AI',
+    'no': 'Believed Traditional'
+})
+
+# Drop missing trust or belief
+df_belief_trust = df_belief_trust.dropna(subset=['trustworthy', 'belief_normalized'])
+
+# Plot
+plt.figure(figsize=(8, 6))
+sns.boxplot(data=df_belief_trust, x='belief_normalized', y='trustworthy')
+plt.title("Trust Ratings by Belief About Authorship")
+plt.xlabel("Belief About Authorship")
+plt.ylabel("Trust Rating")
+plt.grid(True, linestyle="--", alpha=0.5)
+plt.tight_layout()
+plt.show()
 # %% ==========================================================================
 # ========== Cohen's D ===================================
 # =============================================================================
@@ -1010,9 +1092,42 @@ def multiple_regression_model_with_background(df, survey_prefix):
     # now run one regression for every row
     formula = 'trustworthy ~ credible + confident + belief + ai_generated + trust_traditional + trust_ChatGPT + doublechecking_ChatGPT + was_traditionaly_wrong + was_ChatGPT_wrong + Familiar_with_AI'
     model = smf.ols(formula=formula, data=df_long).fit()
+    
     return model
 
+def create_long_df_for_modeling(df, survey_prefix):
+    df_trust = df.melt(id_vars=['participant_id'], value_vars=[f'{survey_prefix}_T{i}_trustworthy' for i in range(1,13)], var_name='text', value_name='trustworthy')
+    df_cred  = df.melt(id_vars=['participant_id'], value_vars=[f'{survey_prefix}_T{i}_credible' for i in range(1,13)], var_name='text', value_name='credible')
+    df_conf  = df.melt(id_vars=['participant_id'], value_vars=[f'{survey_prefix}_T{i}_confident' for i in range(1,13)], var_name='text', value_name='confident')
+    df_bel   = df.melt(id_vars=['participant_id'], value_vars=[f'{survey_prefix}_T{i}_belief' for i in range(1,13)], var_name='text', value_name='belief')
+    df_ai    = df.melt(id_vars=['participant_id'], value_vars=[f'{survey_prefix}_T{i}_ai_generated' for i in range(1,13)], var_name='text', value_name='ai_generated')
 
+    for df_ in (df_trust, df_cred, df_conf, df_bel, df_ai):
+        df_['text'] = df_['text'].str.replace(r'^' + survey_prefix + r'_T(\d+)_.+$', r'T\1', regex=True)
+
+    df_long = df_trust.merge(df_cred, on=['participant_id','text']) \
+                      .merge(df_conf, on=['participant_id','text']) \
+                      .merge(df_bel,  on=['participant_id','text']) \
+                      .merge(df_ai,   on=['participant_id','text'])
+
+    background_cols = ["trust_traditional", "trust_ChatGPT", "doublechecking_ChatGPT", "was_traditionaly_wrong", "was_ChatGPT_wrong", "Familiar_with_AI", "survey_type"]
+    df_long = df_long.merge(df[['participant_id'] + background_cols].drop_duplicates(), on='participant_id', how='left')
+
+    return df_long
+df_long_all = pd.concat([
+    create_long_df_for_modeling(df_1a, 'Sv1a'),
+    create_long_df_for_modeling(df_1b, 'Sv1b'),
+    create_long_df_for_modeling(df_2a, 'Sv2a'),
+    create_long_df_for_modeling(df_2b, 'Sv2b')
+], ignore_index=True)
+
+# Run regression with interaction to check if survey type influences effect of ai_generated
+model_with_interaction = smf.ols(
+    'trustworthy ~ ai_generated * survey_type + credible + confident + belief + trust_traditional + trust_ChatGPT + doublechecking_ChatGPT + was_traditionaly_wrong + was_ChatGPT_wrong + Familiar_with_AI',
+    data=df_long_all
+).fit()
+print(model_with_interaction.summary())
+    
 # %%=========================================================================
 # ==========Multiple regression model per participant to compare to background questions ===================================
 # =============================================================================
@@ -1053,6 +1168,8 @@ df_concatenated = pd.concat([df_1a, df_2a, df_1b, df_2b], ignore_index=True)
 df_concatenated["correct_count"] = df_concatenated[
     [col for col in df_concatenated.columns if col.endswith("_aggregated_correct_belief")]
 ].bfill(axis=1).iloc[:, 0]
+# Label participants who correctly identified 75% or more of the texts
+df_concatenated["good_differentiator"] = df_concatenated["correct_count"] >= 9
 
 df_concatenated["familiarity"] = df_concatenated[
     [col for col in df_concatenated.columns if "Familiar_with_AI" in col]
@@ -1221,4 +1338,53 @@ def find_scores(df, survey_prefix):
     }
     return participant_scores
 
-    
+
+
+
+"""
+1. Trustworthiness, Credibility, Confidence by Question Order (first 3 plots)
+- Compared whether belief questions were shown at the front or back of the survey.
+- Observation:
+    • Slightly higher medians in the 'back' condition across all three metrics.
+    • Suggests possible priming or order effects on trust, credibility, and confidence.
+
+2. Q-Q Plots of Differences Between AI and Traditional Texts (plots 4-6)
+- Q-Q plots for trustworthy_mean, credible_mean, and confident_mean differences (AI - Traditional).
+- Observation:
+    • Data points fall mostly along the diagonal.
+    • Differences are approximately normally distributed.
+    • Justifies the use of paired t-tests.
+
+3. Paired t-Tests and Cohen's d (Effect Sizes)
+| Variable     | t-value | p-value | Cohen’s d | Interpretation                  |
+|--------------|---------|---------|-----------|---------------------------------|
+| Trustworthy  |  0.43   |  0.671  |   0.078   | 🟦 No significant difference     |
+| Credible     |  0.96   |  0.347  |   0.178   | 🟦 No significant difference     |
+| Confident    |  1.93   |  0.064  |   0.358   | 🟨 Trend toward higher confidence in AI texts - we could maybe say it's kinda significant - 0.05 is a hard margin by the scientific community, but as we have seen on Bayesian, this can be arbitrary, so 0.064 is acceptable we think.
+
+
+4. Trust Ratings by Belief About Authorship
+- Compared trust ratings between texts participants believed were AI vs. traditional.
+- Observation:
+    • Median trust higher for texts believed to be traditional.
+    • Belief influences trust more than actual authorship.
+
+5. Familiarity with AI vs. Belief Accuracy
+- Explored whether AI familiarity predicted correct identification of AI-generated texts.
+- Observation:
+    • Weak negative trend (slope slightly downward).
+    • No strong correlation—familiarity doesn’t improve detection accuracy.
+
+6. Multiple Regression Model (trustworthy as DV)
+- Predictors included: credible, confident, belief, ai_generated, trust variables, and familiarity.
+- Key findings:
+    • credible and confident were strong and significant predictors of trust.
+    • ai_generated and belief had no significant effects.
+    • Interaction term (ai_generated * survey_type) not significant.
+
+Overall Summary:
+- Trust ratings were not driven by actual authorship (AI vs. traditional).
+- Beliefs about authorship and perceived credibility/confidence mattered more.
+- Question order showed weak trends but no strong effects.
+- Familiarity with AI did not improve authorship identification ability.
+"""
