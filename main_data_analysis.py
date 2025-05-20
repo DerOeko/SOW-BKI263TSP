@@ -51,11 +51,11 @@ import statsmodels.formula.api as smf
 # ========== read in raw surveys (must be in the same folder as this script) ==
 # =============================================================================
 
-raw_Survey1a = pd.read_csv('Survey1a.csv')
-raw_Survey2a = pd.read_csv('Survey2a.csv')
+raw_Survey1a = pd.read_csv('cleaned_survey1a.csv')
+raw_Survey2a = pd.read_csv('cleaned_survey2a.csv')
 
-raw_Survey1b = pd.read_csv('Survey1b.csv')
-raw_Survey2b = pd.read_csv('Survey2b.csv')
+raw_Survey1b = pd.read_csv('cleaned_survey1b.csv')  
+raw_Survey2b = pd.read_csv('cleaned_survey2b.csv')
 
 # %% ==========================================================================
 # ========== define mappings, data cleaner and processing function ============
