@@ -1185,6 +1185,10 @@ plt.show()
 
 
 """
+-->Note about dataset cleaning: some participants still had like 3/4 NaNs left, so instead of dropping them,
+Juan manually updated them with mean and mode
+
+
 1. Trustworthiness, Credibility, Confidence by Question Order (first 3 plots)
 - Compared whether belief questions were shown at the front or back of the survey.
 - Observation:
