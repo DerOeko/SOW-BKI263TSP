@@ -1184,7 +1184,53 @@ plt.title("Familiarity with AI vs. Correct Belief Count")
 plt.show()
 
 
+"""
+1. Trustworthiness, Credibility, Confidence by Question Order (first 3 plots)
+- Compared whether belief questions were shown at the front or back of the survey.
+- Observation:
+    • Slightly higher medians in the 'back' condition across all three metrics.
+    • Suggests possible priming or order effects on trust, credibility, and confidence.
 
+2. Q-Q Plots of Differences Between AI and Traditional Texts (plots 4-6)
+- Q-Q plots for trustworthy_mean, credible_mean, and confident_mean differences (AI - Traditional).
+- Observation:
+    • Data points fall mostly along the diagonal.
+    • Differences are approximately normally distributed.
+    • Justifies the use of paired t-tests.
+
+3. Paired t-Tests and Cohen's d (Effect Sizes)
+| Variable     | t-value | p-value | Cohen’s d | Interpretation                  |
+|--------------|---------|---------|-----------|---------------------------------|
+| Trustworthy  |  0.58  |  0.56  |   0.107   | 🟦 No significant difference     |
+| Credible     |  1.11   |  0.347  |   0.203   | 🟦 No significant difference     |
+| Confident    |  2.11   |  0.043  |   0.385   | 🟨 Trend toward higher confidence in AI texts, as p <0.05 
+
+
+4. Trust Ratings by Belief About Authorship
+- Compared trust ratings between texts participants believed were AI vs. traditional.
+- Observation:
+    • Median trust higher for texts believed to be traditional.
+    • Belief influences trust more than actual authorship.
+
+5. Familiarity with AI vs. Belief Accuracy
+- Explored whether AI familiarity predicted correct identification of AI-generated texts.
+- Observation:
+    • Weak negative trend (slope slightly downward).
+    • No strong correlation—familiarity doesn’t improve detection accuracy.
+
+6. Multiple Regression Model (trustworthy as DV)
+- Predictors included: credible, confident, belief, ai_generated, trust variables, and familiarity.
+- Key findings:
+    • credible and confident were strong and significant predictors of trust.
+    • ai_generated and belief had no significant effects.
+    • Interaction term (ai_generated * survey_type) not significant.
+
+Overall Summary:
+- Trust ratings were not driven by actual authorship (AI vs. traditional).
+- Beliefs about authorship and perceived credibility/confidence mattered more.
+- Question order showed weak trends but no strong effects.
+- Familiarity with AI did not improve authorship identification ability.
+"""
 
 # %% ==========================================================================
 # ========== RAF AND FERDI TESTS LEAVE===================================
@@ -1233,7 +1279,7 @@ def correlate_trust_usage(df, survey_prefix):
     result["mean_trust_conf_avg"] = agg_average_trust_conf_per_partcipant 
     return result
 # %%=========================================================================
-# ========== Test text performance over all essays  ===================================
+# ========== RAF AND FERDI TESTS LEAVE Test text performance over all essays  ===================================
 # =============================================================================
 
 # so check if a text is guessed correctly / incorrectly often or not 
@@ -1289,7 +1335,7 @@ print(combinded_text_perfomace_by_a_b(df_1a, df_2a))
 print(combinded_text_perfomace_by_a_b(df_1b, df_2b))
 
 # %%=========================================================================
-# ========== Finding the scores for trust,cred,conf ===================================
+# ========== RAF AND FERDI TESTS LEAVE Finding the scores for trust,cred,conf ===================================
 # =============================================================================
 def find_scores(df, survey_prefix):
     """
@@ -1338,53 +1384,3 @@ def find_scores(df, survey_prefix):
     }
     return participant_scores
 
-
-
-
-"""
-1. Trustworthiness, Credibility, Confidence by Question Order (first 3 plots)
-- Compared whether belief questions were shown at the front or back of the survey.
-- Observation:
-    • Slightly higher medians in the 'back' condition across all three metrics.
-    • Suggests possible priming or order effects on trust, credibility, and confidence.
-
-2. Q-Q Plots of Differences Between AI and Traditional Texts (plots 4-6)
-- Q-Q plots for trustworthy_mean, credible_mean, and confident_mean differences (AI - Traditional).
-- Observation:
-    • Data points fall mostly along the diagonal.
-    • Differences are approximately normally distributed.
-    • Justifies the use of paired t-tests.
-
-3. Paired t-Tests and Cohen's d (Effect Sizes)
-| Variable     | t-value | p-value | Cohen’s d | Interpretation                  |
-|--------------|---------|---------|-----------|---------------------------------|
-| Trustworthy  |  0.43   |  0.671  |   0.078   | 🟦 No significant difference     |
-| Credible     |  0.96   |  0.347  |   0.178   | 🟦 No significant difference     |
-| Confident    |  1.93   |  0.064  |   0.358   | 🟨 Trend toward higher confidence in AI texts - we could maybe say it's kinda significant - 0.05 is a hard margin by the scientific community, but as we have seen on Bayesian, this can be arbitrary, so 0.064 is acceptable we think.
-
-
-4. Trust Ratings by Belief About Authorship
-- Compared trust ratings between texts participants believed were AI vs. traditional.
-- Observation:
-    • Median trust higher for texts believed to be traditional.
-    • Belief influences trust more than actual authorship.
-
-5. Familiarity with AI vs. Belief Accuracy
-- Explored whether AI familiarity predicted correct identification of AI-generated texts.
-- Observation:
-    • Weak negative trend (slope slightly downward).
-    • No strong correlation—familiarity doesn’t improve detection accuracy.
-
-6. Multiple Regression Model (trustworthy as DV)
-- Predictors included: credible, confident, belief, ai_generated, trust variables, and familiarity.
-- Key findings:
-    • credible and confident were strong and significant predictors of trust.
-    • ai_generated and belief had no significant effects.
-    • Interaction term (ai_generated * survey_type) not significant.
-
-Overall Summary:
-- Trust ratings were not driven by actual authorship (AI vs. traditional).
-- Beliefs about authorship and perceived credibility/confidence mattered more.
-- Question order showed weak trends but no strong effects.
-- Familiarity with AI did not improve authorship identification ability.
-"""
